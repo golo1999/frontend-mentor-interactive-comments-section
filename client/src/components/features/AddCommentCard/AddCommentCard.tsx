@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { createRef, useCallback, useMemo, useState } from "react";
+import { createRef, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Card, ConditionalWrapper, Photo } from "components";
 import { USERS } from "consts";
@@ -14,6 +14,7 @@ export function AddCommentCard({
   type = "COMMENT",
   onButtonClick,
 }: Props) {
+  const textAreaRef = createRef<HTMLTextAreaElement>();
   const deviceType = useDeviceType();
 
   const getParentCommentUser = useCallback(() => {
@@ -47,7 +48,13 @@ export function AddCommentCard({
   }, [comment, parentCommentUser, type]);
 
   const [text, setText] = useState(getDefaultText());
-  const textAreaRef = createRef<HTMLTextAreaElement>();
+
+  useEffect(() => {
+    if (textAreaRef.current && (type === "REPLY" || type === "UPDATE")) {
+      textAreaRef.current.focus();
+      textAreaRef.current.selectionStart = text.length;
+    }
+  }, [text, textAreaRef, type]);
 
   const trimmedText = text.trim();
 
