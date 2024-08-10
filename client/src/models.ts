@@ -8,12 +8,12 @@ export type User = {
 type CommentCommonProps = {
   dateTime: string;
   id: string;
-  votes: Vote[];
   replies: Comment[];
   score: number;
   text: string;
   user: User;
   userId: string;
+  votes: Vote[];
 };
 
 type CommentConditionalProps =

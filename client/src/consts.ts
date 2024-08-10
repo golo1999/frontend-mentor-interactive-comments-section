@@ -2,7 +2,7 @@ import { Comment, User } from "models";
 
 export const COMMENTS: Comment[] = [
   {
-    dateTime: "2024-06-07T17:32:05.000Z",
+    dateTime: "2024-06-07T17:32:05.4203629+00:00",
     id: "comment-0",
     replies: [],
     score: 2,
@@ -15,11 +15,11 @@ export const COMMENTS: Comment[] = [
     ],
   },
   {
-    dateTime: "2024-07-15T09:28:53.000Z",
+    dateTime: "2024-07-15T09:28:53.4203629+00:00",
     id: "comment-1",
     replies: [
       {
-        dateTime: "2024-07-25T14:05:42.000Z",
+        dateTime: "2024-07-25T14:05:42.4203629+00:00",
         id: "comment-2",
         parentId: "comment-1",
         replies: [],
@@ -39,7 +39,7 @@ export const COMMENTS: Comment[] = [
         ],
       },
       {
-        dateTime: "2024-08-01T12:05:58.000Z",
+        dateTime: "2024-08-01T12:05:58.4203629+00:00",
         id: "comment-3",
         parentId: "comment-1",
         replies: [],
