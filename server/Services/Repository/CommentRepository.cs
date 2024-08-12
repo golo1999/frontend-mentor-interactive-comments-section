@@ -35,11 +35,11 @@ namespace server.Services.Repository
                 ],
             },
             new() {
-                DateTime = DateTime.UtcNow,
+                DateTime = new DateTimeOffset(2024, 7, 15, 9, 28, 53, TimeSpan.Zero),
                 Id = new Guid("fca3c54d-941c-42c6-8c2a-42a0f97dcf70"),
                 Replies = [
                     new() {
-                        DateTime = DateTime.UtcNow,
+                        DateTime = new DateTimeOffset(2024, 7, 25, 14, 5, 42, TimeSpan.Zero),
                         Id = new Guid("6eb34ef1-018f-4c51-87c8-cab340dbdd15"),
                         ParentId = new Guid("fca3c54d-941c-42c6-8c2a-42a0f97dcf70"),
                         ReplyToUser = new() {
@@ -67,7 +67,7 @@ namespace server.Services.Repository
                         ],
                     },
                     new() {
-                        DateTime = DateTime.UtcNow,
+                        DateTime = new DateTimeOffset(2024, 8, 1, 12, 5, 58, TimeSpan.Zero),
                         Id = new Guid("6eb34ef1-018f-4c51-87c8-cab340dbdd16"),
                         ParentId = new Guid("fca3c54d-941c-42c6-8c2a-42a0f97dcf70"),
                         ReplyToUser = new() {
@@ -127,10 +127,15 @@ namespace server.Services.Repository
         }
 
         // TODO: Make this method async after adding DbContext
-        public Task<Comment?> DeleteAsync(Guid userId, Guid id, Guid? parentId)
+        public Task<Comment?>? DeleteAsync(Guid userId, Guid id, Guid? parentId)
         {
             // TODO: Use await after adding DbContext
-            var comment = GetByIdAsync(userId, id, parentId).Result;
+            var comment = GetByIdAsync(id, parentId).Result;
+
+            if (comment?.UserId != userId)
+            {
+                return null;
+            }
 
             if (comment is not null)
             {
@@ -159,28 +164,28 @@ namespace server.Services.Repository
         }
 
         // TODO: Make this method async after adding DbContext
-        public Task<Comment?> GetByIdAsync(Guid userId, Guid id, Guid? parentId)
+        public Task<Comment?> GetByIdAsync(Guid id, Guid? parentId)
         {
             Comment? comment;
 
             if (parentId is null)
             {
-                comment = _comments.Find(c => c.Id.Equals(id) && c.UserId.Equals(userId));
+                comment = _comments.Find(c => c.Id.Equals(id));
             }
             else
             {
                 var parentComment = _comments.Find(c => c.Id.Equals(parentId));
-                comment = parentComment?.Replies.Find(r => r.Id.Equals(id) && r.UserId.Equals(userId));
+                comment = parentComment?.Replies.Find(r => r.Id.Equals(id));
             }
 
             return Task.FromResult(comment);
         }
 
         // TODO: Make this method async after adding DbContext
-        public Task<Comment?> PatchAsync(Guid userId, Guid id, Guid? parentId, JsonPatchDocument<Comment> patch)
+        public Task<Comment?> PatchAsync(Guid id, Guid? parentId, JsonPatchDocument<Comment> patch)
         {
             // TODO: Use await after adding DbContext
-            var comment = GetByIdAsync(userId, id, parentId).Result;
+            var comment = GetByIdAsync(id, parentId).Result;
 
             if (comment is not null)
             {

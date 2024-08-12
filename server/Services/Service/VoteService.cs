@@ -29,7 +29,7 @@ namespace server.Services.Service
 
         public async Task<Comment?> DownvoteByCommentId(Guid userId, Guid commentId, Guid? parentCommentId)
         {
-            var comment = await _commentRepository.GetByIdAsync(userId, commentId, parentCommentId);
+            var comment = await _commentRepository.GetByIdAsync(commentId, parentCommentId);
             Vote? userVote = await _voteRepository.GetByCommentIdAsync(userId, commentId);
 
             if (userVote is null)
@@ -46,7 +46,7 @@ namespace server.Services.Service
                 var patchDocument = new JsonPatchDocument<Comment>();
                 patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score - 1 });
                 patchDocument.Operations.Add(new() { op = "add", path = "/votes/-", value = userVote });
-                return await _commentRepository.PatchAsync(userId, commentId, parentCommentId, patchDocument);
+                return await _commentRepository.PatchAsync(commentId, parentCommentId, patchDocument);
             }
 
             var userVoteIndex = comment?.Votes.FindIndex(v => v.CommentId.Equals(commentId) && v.UserId.Equals(userId));
@@ -62,7 +62,7 @@ namespace server.Services.Service
                 commentPatchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score - 2 });
                 commentPatchDocument.Operations.Add(new() { op = "replace", path = $"""/votes/{userVoteIndex}""", value = updatedUserVote });
 
-                return await _commentRepository.PatchAsync(userId, commentId, parentCommentId, commentPatchDocument);
+                return await _commentRepository.PatchAsync(commentId, parentCommentId, commentPatchDocument);
             }
 
             // userVote.Type == VoteType.DOWN
@@ -71,7 +71,7 @@ namespace server.Services.Service
             commentPatchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score + 1 });
             commentPatchDocument.Operations.Add(new() { op = "remove", path = $"""/votes/{userVoteIndex}""" });
 
-            return await _commentRepository.PatchAsync(userId, commentId, parentCommentId, commentPatchDocument);
+            return await _commentRepository.PatchAsync(commentId, parentCommentId, commentPatchDocument);
         }
 
         public async Task<IEnumerable<Vote>> GetAllByCommentId(Guid commentId)
@@ -91,7 +91,7 @@ namespace server.Services.Service
 
         public async Task<Comment?> UpvoteByCommentId(Guid userId, Guid commentId, Guid? parentCommentId)
         {
-            var comment = await _commentRepository.GetByIdAsync(userId, commentId, parentCommentId);
+            var comment = await _commentRepository.GetByIdAsync(commentId, parentCommentId);
             Vote? userVote = await _voteRepository.GetByCommentIdAsync(userId, commentId);
 
             if (userVote is null)
@@ -108,7 +108,7 @@ namespace server.Services.Service
                 var patchDocument = new JsonPatchDocument<Comment>();
                 patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score + 1 });
                 patchDocument.Operations.Add(new() { op = "add", path = "/votes/-", value = userVote });
-                return await _commentRepository.PatchAsync(userId, commentId, parentCommentId, patchDocument);
+                return await _commentRepository.PatchAsync(commentId, parentCommentId, patchDocument);
             }
 
             var userVoteIndex = comment?.Votes.FindIndex(v => v.CommentId.Equals(commentId) && v.UserId.Equals(userId));
@@ -124,7 +124,7 @@ namespace server.Services.Service
                 commentPatchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score + 2 });
                 commentPatchDocument.Operations.Add(new() { op = "replace", path = $"""/votes/{userVoteIndex}""", value = updatedUserVote });
 
-                return await _commentRepository.PatchAsync(userId, commentId, parentCommentId, commentPatchDocument);
+                return await _commentRepository.PatchAsync(commentId, parentCommentId, commentPatchDocument);
             }
 
             // userVote.Type == VoteType.UP
@@ -133,7 +133,7 @@ namespace server.Services.Service
             commentPatchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score - 1 });
             commentPatchDocument.Operations.Add(new() { op = "remove", path = $"""/votes/{userVoteIndex}""" });
 
-            return await _commentRepository.PatchAsync(userId, commentId, parentCommentId, commentPatchDocument);
+            return await _commentRepository.PatchAsync(commentId, parentCommentId, commentPatchDocument);
         }
     }
 }

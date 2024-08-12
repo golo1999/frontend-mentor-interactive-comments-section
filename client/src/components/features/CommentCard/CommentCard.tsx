@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AddCommentCard, Card, Photo } from "components";
 import { useDeviceType } from "hooks";
 import { Comment } from "models";
+import { useAuthenticatedUserStore } from "store";
 import type { AddCommentCardType } from "types";
 
 import { Container, Icon, Text } from "./CommentCard.style";
@@ -32,6 +33,7 @@ export function CommentCard({
     user: { id: userId, username },
   } = comment;
 
+  const { authenticatedUser } = useAuthenticatedUserStore();
   const deviceType = useDeviceType();
   const [addCommentCardType, setAddCommentCardType] =
     useState<Extract<AddCommentCardType, "REPLY" | "UPDATE">>("REPLY");
@@ -118,13 +120,15 @@ export function CommentCard({
               <Container.Comment.Details>
                 <Photo />
                 <Text.Comment.Username>{username}</Text.Comment.Username>
-                {userId === "me" && <Container.Me>You</Container.Me>}
+                {userId === authenticatedUser?.id && (
+                  <Container.Me>You</Container.Me>
+                )}
                 <Text.Comment.DateTimeDifference>
                   {getDateTimeDifferenceText()}
                 </Text.Comment.DateTimeDifference>
               </Container.Comment.Details>
               <Container.Actions>
-                {userId === "me" ? (
+                {userId === authenticatedUser?.id ? (
                   <>
                     <Text.Action.Delete onClick={onDeleteClick}>
                       <Icon.Delete />
@@ -171,7 +175,9 @@ export function CommentCard({
           <Photo />
           <Container.Username>
             <Text.Comment.Username>{username}</Text.Comment.Username>
-            {userId === "me" && <Container.Me>You</Container.Me>}
+            {userId === authenticatedUser?.id && (
+              <Container.Me>You</Container.Me>
+            )}
           </Container.Username>
           <Text.Comment.DateTimeDifference>
             {getDateTimeDifferenceText()}
@@ -192,7 +198,7 @@ export function CommentCard({
             <Icon.Minus onClick={onDownvoteClick} />
           </Container.Score>
           <Container.Actions>
-            {userId === "me" ? (
+            {userId === authenticatedUser?.id ? (
               <>
                 <Text.Action.Delete onClick={onDeleteClick}>
                   <Icon.Delete />

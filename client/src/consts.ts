@@ -7,7 +7,11 @@ export const COMMENTS: Comment[] = [
     replies: [],
     score: 2,
     text: "Impressive! Though it seems the drag feature could be improved. But overall it looks incredible. You've nailed the design and the responsiveness at various breakpoints works really well.",
-    user: { id: "user-0", username: "amyrobson" },
+    user: {
+      emailAddress: "amyrobson@email.com",
+      id: "6eb34ef1-018f-4c51-87c8-cab340dbdd26",
+      username: "amyrobson",
+    },
     userId: "user-0",
     votes: [
       { commentId: "comment-0", id: "vote-0", type: "UP", userId: "user-1" },
@@ -23,11 +27,19 @@ export const COMMENTS: Comment[] = [
         id: "comment-2",
         parentId: "comment-1",
         replies: [],
-        replyToUser: { id: "user-1", username: "maxblagun" },
+        replyToUser: {
+          emailAddress: "maxblagun@email.com",
+          id: "6eb34ef1-018f-4c51-87c8-cab340dbdd27",
+          username: "maxblagun",
+        },
         replyToUserId: "user-1",
         score: 1,
         text: "If you're still new, I'd recommend focusing on the fundamentals of HTML, CSS, and JS before considering React. It's very tempting to jump ahead but lay a solid foundation first.",
-        user: { id: "user-2", username: "ramsesmiron" },
+        user: {
+          emailAddress: "ramsesmiron@email.com",
+          id: "6eb34ef1-018f-4c51-87c8-cab340dbdd28",
+          username: "ramsesmiron",
+        },
         userId: "user-2",
         votes: [
           {
@@ -43,18 +55,30 @@ export const COMMENTS: Comment[] = [
         id: "comment-3",
         parentId: "comment-1",
         replies: [],
-        replyToUser: { id: "user-2", username: "ramsesmiron" },
+        replyToUser: {
+          emailAddress: "ramsesmiron@email.com",
+          id: "6eb34ef1-018f-4c51-87c8-cab340dbdd28",
+          username: "ramsesmiron",
+        },
         replyToUserId: "user-2",
         score: 0,
         text: "I couldn't agree more with this. Everything moves so fast and it always seems like everyone knows the newest library/framework. But the fundamentals are what stay constant.",
-        user: { id: "me", username: "me" },
+        user: {
+          emailAddress: "me@email.com",
+          id: "6eb34ef1-018f-4c51-87c8-cab340dbdd25",
+          username: "me",
+        },
         userId: "me",
         votes: [],
       },
     ],
     score: -1,
     text: "Woah, your project looks awesome! How long have you been coding for? I'm still new, but think I want to dive into React as well soon. Perhaps you can give me an insight on where I can learn React? Thanks!",
-    user: { id: "user-1", username: "maxblagun" },
+    user: {
+      emailAddress: "maxblagun@email.com",
+      id: "6eb34ef1-018f-4c51-87c8-cab340dbdd27",
+      username: "maxblagun",
+    },
     userId: "user-1",
     votes: [
       {
@@ -68,8 +92,24 @@ export const COMMENTS: Comment[] = [
 ];
 
 export const USERS: User[] = [
-  { id: "me", username: "me" },
-  { id: "user-0", username: "amyrobson" },
-  { id: "user-1", username: "maxblagun" },
-  { id: "user-2", username: "ramsesmiron" },
+  {
+    emailAddress: "me@email.com",
+    id: "6eb34ef1-018f-4c51-87c8-cab340dbdd25",
+    username: "me",
+  },
+  {
+    emailAddress: "amyrobson@email.com",
+    id: "6eb34ef1-018f-4c51-87c8-cab340dbdd26",
+    username: "amyrobson",
+  },
+  {
+    emailAddress: "maxblagun@email.com",
+    id: "6eb34ef1-018f-4c51-87c8-cab340dbdd27",
+    username: "maxblagun",
+  },
+  {
+    emailAddress: "ramsesmiron@email.com",
+    id: "6eb34ef1-018f-4c51-87c8-cab340dbdd28",
+    username: "ramsesmiron",
+  },
 ];

@@ -9,7 +9,7 @@ namespace server.Services.Service
         public Task<Comment?> Delete(Guid userId, Guid id, Guid? parentId);
         public Task<Comment?> Downvote(Guid userId, Guid id, Guid? parentId);
         public Task<IEnumerable<Comment>> GetAll();
-        public Task<Comment?> Patch(Guid userId, Guid id, Guid? parentId, JsonPatchDocument<Comment> patch);
+        public Task<Comment?> Patch(Guid id, Guid? parentId, JsonPatchDocument<Comment> patch);
         public Task<Comment?> Upvote(Guid userId, Guid id, Guid? parentId);
     }
 }

@@ -1,26 +1,67 @@
-import { useState } from "react";
+import { useMsal } from "@azure/msal-react";
 
+import { useEffect, useState } from "react";
+
+import {
+  useDeleteCommentMutation,
+  useDownvoteCommentMutation,
+  useGetCommentsQuery,
+  usePatchCommentMutation,
+  usePostCommentMutation,
+  useUpvoteCommentMutation,
+} from "api";
 import { AddCommentCard, CommentCard, DeleteModal } from "components";
 import { useScrollLock } from "hooks";
 import { Comment } from "models";
-import { useCommentsStore } from "store";
+import { useAuthenticatedUserStore, useCommentsStore } from "store";
 import { AddCommentCardType } from "types";
 import { createPortal } from "react-dom";
 
 import { Container, Line } from "./HomePage.style";
 
 export function HomePage() {
+  const { authenticatedUser } = useAuthenticatedUserStore();
+  const { comments, setComments } = useCommentsStore();
+  const { instance } = useMsal();
+  const { data: fetchedComments, status } = useGetCommentsQuery(instance);
   const {
-    comments,
-    addComment,
-    deleteComment,
-    downvoteComment,
-    updateComment,
-    upvoteComment,
-  } = useCommentsStore();
+    error: deleteCommentError,
+    isSuccess: isDeleteCommentSuccessful,
+    mutate: deleteComment,
+  } = useDeleteCommentMutation();
+  const {
+    data: downvotedComment,
+    error: downvoteCommentError,
+    isSuccess: isDownvoteCommentSuccessful,
+    mutate: downvoteComment,
+  } = useDownvoteCommentMutation();
+  const {
+    data: patchedComment,
+    error: patchCommentError,
+    isSuccess: isPatchCommentSuccessful,
+    mutate: patchComment,
+  } = usePatchCommentMutation();
+  const {
+    data: addedComment,
+    error: postCommentError,
+    isSuccess: isPostCommentSuccessful,
+    mutate: postComment,
+  } = usePostCommentMutation();
+  const {
+    data: upvotedComment,
+    error: upvoteCommentError,
+    isSuccess: isUpvoteCommentSuccessful,
+    mutate: upvoteComment,
+  } = useUpvoteCommentMutation();
   const { lockScroll, unlockScroll } = useScrollLock();
   const [commentToDelete, setCommentToDelete] = useState<Comment>();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (fetchedComments) {
+      setComments(fetchedComments);
+    }
+  }, [fetchedComments, setComments]);
 
   function handleDeleteModalClose() {
     setCommentToDelete(undefined);
@@ -30,7 +71,22 @@ export function HomePage() {
 
   function handleDeleteModalConfirm() {
     if (commentToDelete) {
-      deleteComment(commentToDelete);
+      deleteComment(
+        {
+          id: commentToDelete.id,
+          instance,
+          parentId: commentToDelete.parentId,
+        },
+        // TODO
+        {
+          onError: (error) => {
+            console.log({ error });
+          },
+          onSuccess: (deletedComment) => {
+            console.log({ deletedComment });
+          },
+        }
+      );
     }
   }
 
@@ -46,11 +102,22 @@ export function HomePage() {
               type: AddCommentCardType
             ) {
               if (type === "UPDATE") {
-                updateComment(newReply);
+                patchComment({
+                  id: newReply.id,
+                  instance,
+                  operations: [
+                    {
+                      path: "/text",
+                      op: "replace",
+                      value: newReply.text,
+                    },
+                  ],
+                  parentId: newReply.parentId,
+                });
                 return;
               }
 
-              addComment(newReply);
+              postComment({ commentDTO: { ...newReply }, instance });
             }
 
             function handleCommentDeleteClick() {
@@ -60,14 +127,17 @@ export function HomePage() {
             }
 
             function handleCommentDownvoteClick() {
-              if (comment.userId !== "me") {
-                downvoteComment(comment);
+              if (comment.userId !== authenticatedUser?.id) {
+                downvoteComment({
+                  id: comment.id,
+                  instance,
+                });
               }
             }
 
             function handleCommentUpvoteClick() {
-              if (comment.userId !== "me") {
-                upvoteComment(comment);
+              if (comment.userId !== authenticatedUser?.id) {
+                upvoteComment({ id: comment.id, instance });
               }
             }
 
@@ -92,11 +162,25 @@ export function HomePage() {
                           type: AddCommentCardType
                         ) {
                           if (type === "UPDATE") {
-                            updateComment(newReply);
+                            patchComment({
+                              id: newReply.id,
+                              instance,
+                              operations: [
+                                {
+                                  path: "/text",
+                                  op: "replace",
+                                  value: newReply.text,
+                                },
+                              ],
+                              parentId: newReply.parentId,
+                            });
                             return;
                           }
 
-                          addComment(newReply);
+                          postComment({
+                            commentDTO: { ...newReply },
+                            instance,
+                          });
                         }
 
                         function handleReplyDeleteClick() {
@@ -106,14 +190,22 @@ export function HomePage() {
                         }
 
                         function handleReplyDownvoteClick() {
-                          if (reply.userId !== "me") {
-                            downvoteComment(reply);
+                          if (reply.userId !== authenticatedUser?.id) {
+                            downvoteComment({
+                              id: reply.id,
+                              instance,
+                              parentId: reply.parentId,
+                            });
                           }
                         }
 
                         function handleReplyUpvoteClick() {
-                          if (reply.userId !== "me") {
-                            upvoteComment(reply);
+                          if (reply.userId !== authenticatedUser?.id) {
+                            upvoteComment({
+                              id: reply.id,
+                              instance,
+                              parentId: reply.parentId,
+                            });
                           }
                         }
 
@@ -136,7 +228,11 @@ export function HomePage() {
           })}
         </Container.Comments>
       )}
-      <AddCommentCard onButtonClick={(newComment) => addComment(newComment)} />
+      <AddCommentCard
+        onButtonClick={(newComment) =>
+          postComment({ commentDTO: { ...newComment }, instance })
+        }
+      />
       {isDeleteModalOpen &&
         createPortal(
           <DeleteModal

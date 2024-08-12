@@ -83,8 +83,7 @@ namespace server.Controllers
         [HttpPatch("{id}")]
         public async Task<ActionResult<Vote?>> Patch([FromRoute] Guid id, Guid? parentId, [FromBody] JsonPatchDocument<Comment> patch)
         {
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
-            var comment = await _commentService.Patch(currentUser.Id, id, parentId, patch);
+            var comment = await _commentService.Patch(id, parentId, patch);
 
             return Ok(comment);
         }

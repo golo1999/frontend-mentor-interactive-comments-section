@@ -1,6 +1,8 @@
+import { OperationType } from "enums";
 import { VoteType } from "types";
 
 export type User = {
+  emailAddress: string;
   id: string;
   username: string;
 };
@@ -21,6 +23,16 @@ type CommentConditionalProps =
   | { parentId?: never; replyToUser?: never; replyToUserId?: never };
 
 export type Comment = CommentCommonProps & CommentConditionalProps;
+
+export type CommentDTO = Pick<Comment, "parentId" | "replyToUserId" | "text">;
+
+export type Operation = {
+  operationType?: OperationType;
+  from?: string;
+  op?: string;
+  path?: string;
+  value?: any;
+};
 
 export type Vote = {
   commentId: string;

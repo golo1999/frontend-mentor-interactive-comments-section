@@ -5,6 +5,7 @@ import { Card, ConditionalWrapper, Photo } from "components";
 import { USERS } from "consts";
 import { useDeviceType } from "hooks";
 import { Comment, User } from "models";
+import { useAuthenticatedUserStore } from "store";
 
 import { Button, Container, TextArea } from "./AddCommentCard.style";
 import { Props } from "./AddCommentCard.types";
@@ -14,6 +15,7 @@ export function AddCommentCard({
   type = "COMMENT",
   onButtonClick,
 }: Props) {
+  const { authenticatedUser } = useAuthenticatedUserStore();
   const textAreaRef = createRef<HTMLTextAreaElement>();
   const deviceType = useDeviceType();
 
@@ -59,11 +61,11 @@ export function AddCommentCard({
   const trimmedText = text.trim();
 
   function handleButtonClick() {
+    if (!authenticatedUser) {
+      return;
+    }
+
     const currentDateTime = dayjs().toISOString();
-    const currentUser: User = {
-      id: "me",
-      username: "me",
-    };
     let returnedComment: Comment;
     let returnedCommentText: string;
 
@@ -75,8 +77,8 @@ export function AddCommentCard({
           replies: [],
           score: 0,
           text,
-          user: currentUser,
-          userId: "me",
+          user: authenticatedUser,
+          userId: authenticatedUser.id,
           votes: [],
         };
         break;
@@ -95,8 +97,8 @@ export function AddCommentCard({
           replies: [],
           score: 0,
           text: returnedCommentText,
-          user: currentUser,
-          userId: "me",
+          user: authenticatedUser,
+          userId: authenticatedUser.id,
           votes: [],
         };
         break;

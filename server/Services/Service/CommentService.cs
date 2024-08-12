@@ -35,9 +35,9 @@ namespace server.Services.Service
             return await _commentRepository.GetAllAsync();
         }
 
-        public async Task<Comment?> Patch(Guid userId, Guid id, Guid? parentId, JsonPatchDocument<Comment> patch)
+        public async Task<Comment?> Patch(Guid id, Guid? parentId, JsonPatchDocument<Comment> patch)
         {
-            return await _commentRepository.PatchAsync(userId, id, parentId, patch);
+            return await _commentRepository.PatchAsync(id, parentId, patch);
         }
 
         public async Task<Comment?> Upvote(Guid userId, Guid id, Guid? parentId)
