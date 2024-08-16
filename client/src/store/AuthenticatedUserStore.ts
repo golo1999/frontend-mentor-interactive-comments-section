@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { USERS } from "consts";
+import { USERS } from "mocks";
 import { User } from "models";
 
 type Store = {

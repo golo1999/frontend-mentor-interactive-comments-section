@@ -1,9 +1,6 @@
-import { createRef, MutableRefObject } from "react";
 import styled, { css } from "styled-components";
 
 import { Colors } from "colors";
-import { Modal } from "components";
-import { useOutsideClick } from "hooks";
 
 const sharedButtonStyle = css`
   border-radius: 2.13vw;
@@ -30,7 +27,7 @@ const sharedButtonStyle = css`
   }
 `;
 
-const Button = {
+export const Button = {
   Cancel: styled.button.attrs({ type: "button" })`
     ${sharedButtonStyle}
     background-color: ${Colors.Neutral.GrayishBlue};
@@ -51,7 +48,7 @@ const Button = {
   `,
 };
 
-const Container = {
+export const Container = {
   Buttons: styled.div`
     align-items: center;
     display: flex;
@@ -69,7 +66,7 @@ const Container = {
   `,
 };
 
-const Text = {
+export const Text = {
   Message: styled.p`
     color: ${Colors.Neutral.GrayishBlue};
     font-size: 3.73vw;
@@ -100,36 +97,3 @@ const Text = {
     }
   `,
 };
-
-interface Props {
-  onClose: () => void;
-  onDelete: () => void;
-}
-
-export function DeleteModal({ onClose, onDelete }: Props) {
-  const modalInnerContainerRef = createRef<HTMLDivElement>();
-
-  useOutsideClick({
-    ref: modalInnerContainerRef as MutableRefObject<HTMLElement>,
-    handle: onClose,
-  });
-
-  function handleDeleteClick() {
-    onDelete();
-    onClose();
-  }
-
-  return (
-    <Modal ref={modalInnerContainerRef}>
-      <Text.Title>Delete comment</Text.Title>
-      <Text.Message>
-        Are you sure you want to delete this comment? This will remove the
-        comment and can't be undone.
-      </Text.Message>
-      <Container.Buttons>
-        <Button.Cancel onClick={onClose}>No, cancel</Button.Cancel>
-        <Button.Delete onClick={handleDeleteClick}>Yes, delete</Button.Delete>
-      </Container.Buttons>
-    </Modal>
-  );
-}

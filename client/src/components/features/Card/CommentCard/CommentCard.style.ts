@@ -153,6 +153,10 @@ export const Container = {
   `,
 };
 
+interface ScoreIconProps {
+  $isDisabled: boolean;
+}
+
 export const Icon = {
   Delete: styled(FaTrash)`
     font-size: 3.73vw;
@@ -180,13 +184,14 @@ export const Icon = {
       }
     }
   `,
-  Minus: styled(FaMinus)`
+  Minus: styled(FaMinus)<ScoreIconProps>`
     color: ${Colors.Primary.LightGrayishBlue};
-    cursor: pointer;
+    ${({ $isDisabled }) => !$isDisabled && "cursor: pointer;"};
     font-size: 3.2vw;
 
     &:hover {
-      color: ${Colors.Primary.ModerateBlue};
+      ${({ $isDisabled }) =>
+        !$isDisabled && `color: ${Colors.Primary.ModerateBlue};`};
     }
 
     @media screen {
@@ -199,13 +204,14 @@ export const Icon = {
       }
     }
   `,
-  Plus: styled(FaPlus)`
+  Plus: styled(FaPlus)<ScoreIconProps>`
     color: ${Colors.Primary.LightGrayishBlue};
-    cursor: pointer;
+    ${({ $isDisabled }) => !$isDisabled && "cursor: pointer;"};
     font-size: 3.2vw;
 
     &:hover {
-      color: ${Colors.Primary.ModerateBlue};
+      ${({ $isDisabled }) =>
+        !$isDisabled && `color: ${Colors.Primary.ModerateBlue};`};
     }
 
     @media screen {

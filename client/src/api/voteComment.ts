@@ -1,43 +1,41 @@
 import { IPublicClientApplication } from "@azure/msal-browser";
 
 import axios from "axios";
-import { useMutation, useQueryClient } from "react-query";
+import { useQueryClient, useMutation } from "react-query";
 
-import { Comment, Operation } from "models";
+import { Comment } from "models";
+import { VoteType } from "types";
 
 interface Props {
   id: string;
   instance: IPublicClientApplication;
-  operations: Operation[];
   parentId?: string;
+  voteType: VoteType;
 }
 
-async function patchCommentMutation({
+async function voteCommentMutation({
   id,
   instance,
-  operations,
   parentId,
+  voteType,
 }: Props) {
   const url = !parentId
-    ? `https://localhost:7105/api/Comment/${id}`
-    : `https://localhost:7105/api/Comment/${id}?parentId=${parentId}`;
-  const { data } = await axios.patch<Comment>(url, JSON.stringify(operations), {
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json-patch+json",
-    },
+    ? `https://localhost:7105/api/Comment/${id}/vote?voteType=${voteType}`
+    : `https://localhost:7105/api/Comment/${id}/vote?voteType=${voteType}&parentId=${parentId}`;
+  const { data } = await axios.patch<Comment>(url, null, {
+    headers: { Accept: "application/json" },
   });
 
   return data;
 }
 
-export function usePatchCommentMutation() {
+export function useVoteCommentMutation() {
   const queryClient = useQueryClient();
 
   return useMutation<Comment, Error, Props>({
-    mutationFn: async ({ id, instance, operations, parentId }) =>
-      patchCommentMutation({ id, instance, operations, parentId }),
-    onSuccess: (patchedComment, { id, parentId }) => {
+    mutationFn: async ({ id, instance, parentId, voteType }) =>
+      voteCommentMutation({ id, instance, parentId, voteType }),
+    onSuccess: (updatedComment, { id, parentId }) => {
       const existingComments = queryClient.getQueryData<Comment[]>("comments");
       let newComments: Comment[];
 
@@ -45,7 +43,7 @@ export function usePatchCommentMutation() {
       if (!parentId) {
         newComments =
           existingComments?.map((existingComment) =>
-            existingComment.id === id ? patchedComment : existingComment
+            existingComment.id === id ? updatedComment : existingComment
           ) || [];
       } else {
         newComments =
@@ -54,7 +52,7 @@ export function usePatchCommentMutation() {
               return {
                 ...existingComment,
                 replies: existingComment.replies.map((existingReply) =>
-                  existingReply.id === id ? patchedComment : existingReply
+                  existingReply.id === id ? updatedComment : existingReply
                 ),
               };
             }

@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { createRef, useCallback, useEffect, useMemo, useState } from "react";
 
 import { Card, ConditionalWrapper, Photo } from "components";
-import { USERS } from "consts";
+import { USERS } from "mocks";
 import { useDeviceType } from "hooks";
 import { Comment, User } from "models";
 import { useAuthenticatedUserStore } from "store";

@@ -21,7 +21,7 @@ async function deleteCommentMutation({ id, instance, parentId }: Props) {
     : `https://localhost:7105/api/Comment/${id}?parentId=${parentId}`;
   const { data } = await axios.delete<Comment>(url, {
     headers: {
-      Accept: "text/plain",
+      Accept: "application/json",
     },
   });
 
@@ -35,28 +35,32 @@ export function useDeleteCommentMutation() {
     mutationFn: async ({ id, instance, parentId }) =>
       deleteCommentMutation({ id, instance, parentId }),
     onSuccess: (deletedComment, { id, parentId }) => {
-      const comments = queryClient.getQueryData<Comment[]>("comments");
+      const existingComments = queryClient.getQueryData<Comment[]>("comments");
+      let newComments: Comment[];
 
+      // First-level comment
       if (!parentId) {
-        queryClient.setQueryData<Comment[]>(
-          "comments",
-          comments?.filter((comment) => comment.id !== id) || []
-        );
+        newComments =
+          existingComments?.filter(
+            (existingComment) => existingComment.id !== id
+          ) || [];
       } else {
-        queryClient.setQueryData<Comment[]>(
-          "comments",
-          comments?.map((comment) => {
-            if (comment.id === parentId) {
+        newComments =
+          existingComments?.map((existingComment) => {
+            if (existingComment.id === parentId) {
               return {
-                ...comment,
-                replies: comment.replies.filter((reply) => reply.id !== id),
+                ...existingComment,
+                replies: existingComment.replies.filter(
+                  (existingReply) => existingReply.id !== id
+                ),
               };
             }
 
-            return comment;
-          }) || []
-        );
+            return existingComment;
+          }) || [];
       }
+
+      queryClient.setQueryData<Comment[]>("comments", newComments);
     },
   });
 }

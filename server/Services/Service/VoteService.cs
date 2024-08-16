@@ -1,98 +1,118 @@
 ﻿using Microsoft.AspNetCore.JsonPatch;
-using Newtonsoft.Json;
 using server.Models.Entities;
 using server.Models.Enums;
 using server.Services.Repository;
 
 namespace server.Services.Service
 {
-    public class VoteService : IVoteService
+    public class VoteService(Lazy<ICommentService> commentService, IUserService userService, IVoteRepository voteRepository) : IVoteService
     {
-        private readonly ICommentRepository _commentRepository;
-        private readonly IVoteRepository _voteRepository;
-
-        public VoteService(ICommentRepository commentRepository, IVoteRepository voteRepository)
-        {
-            _commentRepository = commentRepository;
-            _voteRepository = voteRepository;
-        }
+        private readonly Lazy<ICommentService> _commentService = commentService;
+        private readonly IUserService _userService = userService;
+        private readonly IVoteRepository _voteRepository = voteRepository;
 
         public async Task<Vote> Create(Vote vote)
         {
-            return await _voteRepository.CreateAsync(vote);
-        }
-
-        public async Task<Vote?> DeleteByCommentId(Guid userId, Guid commentId)
-        {
-            return await _voteRepository.DeleteByCommentIdAsync(userId, commentId);
-        }
-
-        public async Task<Comment?> DownvoteByCommentId(Guid userId, Guid commentId, Guid? parentCommentId)
-        {
-            var comment = await _commentRepository.GetByIdAsync(commentId, parentCommentId);
-            Vote? userVote = await _voteRepository.GetByCommentIdAsync(userId, commentId);
-
-            if (userVote is null)
+            if (await _commentService.Value.GetById(vote.CommentId) is null)
             {
-                var newVote = new Vote
-                {
-                    CommentId = commentId,
-                    Id = Guid.NewGuid(),
-                    Type = VoteType.DOWN,
-                    UserId = userId
-                };
-                userVote = await _voteRepository.CreateAsync(newVote);
-
-                var patchDocument = new JsonPatchDocument<Comment>();
-                patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score - 1 });
-                patchDocument.Operations.Add(new() { op = "add", path = "/votes/-", value = userVote });
-                return await _commentRepository.PatchAsync(commentId, parentCommentId, patchDocument);
+                throw new Exception("The comment does not exist.");
             }
 
-            var userVoteIndex = comment?.Votes.FindIndex(v => v.CommentId.Equals(commentId) && v.UserId.Equals(userId));
-            JsonPatchDocument<Comment> commentPatchDocument;
-
-            if (userVote.Type == VoteType.UP)
+            if (await _userService.GetById(vote.UserId) is null)
             {
-                var votePatchDocument = new JsonPatchDocument<Vote>();
-                votePatchDocument.Operations.Add(new() { op = "replace", path = "/type", value = VoteType.DOWN });
-                var updatedUserVote = await _voteRepository.PatchByCommentIdAsync(userId, commentId, votePatchDocument);
-
-                commentPatchDocument = new JsonPatchDocument<Comment>();
-                commentPatchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score - 2 });
-                commentPatchDocument.Operations.Add(new() { op = "replace", path = $"""/votes/{userVoteIndex}""", value = updatedUserVote });
-
-                return await _commentRepository.PatchAsync(commentId, parentCommentId, commentPatchDocument);
+                throw new Exception("The user does not exist.");
             }
 
-            // userVote.Type == VoteType.DOWN
-            await _voteRepository.DeleteByCommentIdAsync(userId, commentId);
-            commentPatchDocument = new JsonPatchDocument<Comment>();
-            commentPatchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score + 1 });
-            commentPatchDocument.Operations.Add(new() { op = "remove", path = $"""/votes/{userVoteIndex}""" });
+            vote.Id = Guid.NewGuid();
 
-            return await _commentRepository.PatchAsync(commentId, parentCommentId, commentPatchDocument);
+            if (await _voteRepository.GetByIdAsync(vote.Id) is not null)
+            {
+                throw new Exception("A vote with the same Id already exists.");
+            }
+
+            return await _voteRepository.CreateAsync(vote) ?? throw new Exception("The vote could not be created.");
+        }
+
+        public async Task<Vote> DeleteByCommentId(Guid userId, Guid commentId)
+        {
+            if (await _commentService.Value.GetById(commentId) is null)
+            {
+                throw new Exception("The comment does not exist.");
+            }
+
+            if (await _userService.GetById(userId) is null)
+            {
+                throw new Exception("The user does not exist.");
+            }
+
+            var currentUser = await _userService.GetByEmailAddress("me@email.com");
+
+            if (!userId.Equals(currentUser?.Id))
+            {
+                throw new Exception("You cannot delete other user's vote.");
+            }
+
+            return await _voteRepository.DeleteByCommentIdAsync(userId, commentId) ?? throw new Exception("The vote could not be deleted.");
         }
 
         public async Task<IEnumerable<Vote>> GetAllByCommentId(Guid commentId)
         {
+            if (await _commentService.Value.GetById(commentId) is null)
+            {
+                throw new Exception("The comment does not exist.");
+            }
+
             return await _voteRepository.GetAllByCommentIdAsync(commentId);
         }
 
-        public async Task<Vote?> GetByCommentId(Guid userId, Guid commentId)
+        public async Task<Vote> GetByCommentId(Guid userId, Guid commentId)
         {
-            return await _voteRepository.GetByCommentIdAsync(userId, commentId);
+            if (await _commentService.Value.GetById(commentId) is null)
+            {
+                throw new Exception("The comment does not exist.");
+            }
+
+            if (await _userService.GetById(userId) is null)
+            {
+                throw new Exception("The user does not exist.");
+            }
+
+            return await _voteRepository.GetByCommentIdAsync(userId, commentId) ?? throw new Exception("The vote could does not exist.");
         }
 
-        public async Task<Vote?> PatchByCommentId(Guid userId, Guid commentId, JsonPatchDocument<Vote> patch)
+        public async Task<Vote> PatchByCommentId(Guid userId, Guid commentId, JsonPatchDocument<Vote> patch)
         {
-            return await _voteRepository.PatchByCommentIdAsync(userId, commentId, patch);
+            if (await _commentService.Value.GetById(commentId) is null)
+            {
+                throw new Exception("The comment does not exist.");
+            }
+
+            if (await _userService.GetById(userId) is null)
+            {
+                throw new Exception("The user does not exist.");
+            }
+
+            var currentUser = await _userService.GetByEmailAddress("me@email.com");
+
+            if (!userId.Equals(currentUser?.Id))
+            {
+                throw new Exception("You cannot patch other user's vote.");
+            }
+
+            return await _voteRepository.PatchByCommentIdAsync(userId, commentId, patch) ?? throw new Exception("The vote could not be patched.");
         }
 
-        public async Task<Comment?> UpvoteByCommentId(Guid userId, Guid commentId, Guid? parentCommentId)
+        public async Task<Comment> VoteByCommentId(VoteType voteType, Guid userId, Guid commentId, Guid? parentCommentId = null)
         {
-            var comment = await _commentRepository.GetByIdAsync(commentId, parentCommentId);
-            Vote? userVote = await _voteRepository.GetByCommentIdAsync(userId, commentId);
+            if (await _userService.GetById(userId) is null)
+            {
+                throw new Exception("The user does not exist.");
+            }
+
+            var comment = await _commentService.Value.GetById(commentId, parentCommentId) ?? throw new Exception("The comment does not exist.");
+            var patchDocument = new JsonPatchDocument<Comment>();
+            var score = 0;
+            var userVote = await _voteRepository.GetByCommentIdAsync(userId, commentId);
 
             if (userVote is null)
             {
@@ -100,40 +120,48 @@ namespace server.Services.Service
                 {
                     CommentId = commentId,
                     Id = Guid.NewGuid(),
-                    Type = VoteType.UP,
+                    Type = voteType,
                     UserId = userId
                 };
-                userVote = await _voteRepository.CreateAsync(newVote);
 
-                var patchDocument = new JsonPatchDocument<Comment>();
-                patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score + 1 });
-                patchDocument.Operations.Add(new() { op = "add", path = "/votes/-", value = userVote });
-                return await _commentRepository.PatchAsync(commentId, parentCommentId, patchDocument);
+                if (await _voteRepository.GetByIdAsync(newVote.Id) is not null)
+                {
+                    throw new Exception("A vote with the same Id already exists.");
+                }
+
+                _ = await _voteRepository.CreateAsync(newVote) ?? throw new Exception("The vote could not be created.");
+                score = comment.Votes.Aggregate(score, (currentScore, vote) => vote.Type switch
+                {
+                    VoteType.DOWN => currentScore - 1,
+                    VoteType.UP => currentScore + 1,
+                    _ => currentScore
+                });
+                patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = score });
+
+                return await _commentService.Value.Patch(commentId, parentCommentId, patchDocument) ?? throw new Exception("The comment could not be created.");
             }
 
-            var userVoteIndex = comment?.Votes.FindIndex(v => v.CommentId.Equals(commentId) && v.UserId.Equals(userId));
-            JsonPatchDocument<Comment> commentPatchDocument;
-
-            if (userVote.Type == VoteType.DOWN)
+            if (userVote.Type != voteType)
             {
                 var votePatchDocument = new JsonPatchDocument<Vote>();
-                votePatchDocument.Operations.Add(new() { op = "replace", path = "/type", value = VoteType.UP });
-                var updatedUserVote = await _voteRepository.PatchByCommentIdAsync(userId, commentId, votePatchDocument);
+                votePatchDocument.Operations.Add(new() { op = "replace", path = "/type", value = voteType });
 
-                commentPatchDocument = new JsonPatchDocument<Comment>();
-                commentPatchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score + 2 });
-                commentPatchDocument.Operations.Add(new() { op = "replace", path = $"""/votes/{userVoteIndex}""", value = updatedUserVote });
-
-                return await _commentRepository.PatchAsync(commentId, parentCommentId, commentPatchDocument);
+                _ = await _voteRepository.PatchByCommentIdAsync(userId, commentId, votePatchDocument) ?? throw new Exception("The vote could not be patched.");
+            }
+            else
+            {
+                _ = await _voteRepository.DeleteByCommentIdAsync(userId, commentId) ?? throw new Exception("The vote could not be deleted.");
             }
 
-            // userVote.Type == VoteType.UP
-            await _voteRepository.DeleteByCommentIdAsync(userId, commentId);
-            commentPatchDocument = new JsonPatchDocument<Comment>();
-            commentPatchDocument.Operations.Add(new() { op = "replace", path = "/score", value = comment?.Score - 1 });
-            commentPatchDocument.Operations.Add(new() { op = "remove", path = $"""/votes/{userVoteIndex}""" });
+            score = comment.Votes.Aggregate(score, (currentScore, vote) => vote.Type switch
+            {
+                VoteType.DOWN => currentScore - 1,
+                VoteType.UP => currentScore + 1,
+                _ => currentScore
+            });
+            patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = score });
 
-            return await _commentRepository.PatchAsync(commentId, parentCommentId, commentPatchDocument);
+            return await _commentService.Value.Patch(commentId, parentCommentId, patchDocument) ?? throw new Exception("The comment could not be patched.");
         }
     }
 }

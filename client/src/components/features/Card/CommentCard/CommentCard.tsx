@@ -111,9 +111,15 @@ export function CommentCard({
       <Container.Main>
         <Card alignItems="flex-start" horizontal>
           <Container.Score>
-            <Icon.Plus onClick={onUpvoteClick} />
+            <Icon.Plus
+              $isDisabled={!authenticatedUser}
+              onClick={onUpvoteClick}
+            />
             <Text.Comment.Score>{score}</Text.Comment.Score>
-            <Icon.Minus onClick={onDownvoteClick} />
+            <Icon.Minus
+              $isDisabled={!authenticatedUser}
+              onClick={onDownvoteClick}
+            />
           </Container.Score>
           <Container.Content>
             <Container.Top>
@@ -127,25 +133,27 @@ export function CommentCard({
                   {getDateTimeDifferenceText()}
                 </Text.Comment.DateTimeDifference>
               </Container.Comment.Details>
-              <Container.Actions>
-                {userId === authenticatedUser?.id ? (
-                  <>
-                    <Text.Action.Delete onClick={onDeleteClick}>
-                      <Icon.Delete />
-                      Delete
-                    </Text.Action.Delete>
-                    <Text.Action.Edit onClick={handleEditClick}>
-                      <Icon.Edit />
-                      Edit
-                    </Text.Action.Edit>
-                  </>
-                ) : (
-                  <Text.Action.Reply onClick={handleReplyClick}>
-                    <Icon.Reply />
-                    Reply
-                  </Text.Action.Reply>
-                )}
-              </Container.Actions>
+              {authenticatedUser && (
+                <Container.Actions>
+                  {userId === authenticatedUser?.id ? (
+                    <>
+                      <Text.Action.Delete onClick={onDeleteClick}>
+                        <Icon.Delete />
+                        Delete
+                      </Text.Action.Delete>
+                      <Text.Action.Edit onClick={handleEditClick}>
+                        <Icon.Edit />
+                        Edit
+                      </Text.Action.Edit>
+                    </>
+                  ) : (
+                    <Text.Action.Reply onClick={handleReplyClick}>
+                      <Icon.Reply />
+                      Reply
+                    </Text.Action.Reply>
+                  )}
+                </Container.Actions>
+              )}
             </Container.Top>
             <Text.Comment.Text>
               {parentId && (
@@ -193,29 +201,37 @@ export function CommentCard({
         </Text.Comment.Text>
         <Container.Bottom>
           <Container.Score>
-            <Icon.Plus onClick={onUpvoteClick} />
+            <Icon.Plus
+              $isDisabled={!authenticatedUser}
+              onClick={onUpvoteClick}
+            />
             <Text.Comment.Score>{score}</Text.Comment.Score>
-            <Icon.Minus onClick={onDownvoteClick} />
+            <Icon.Minus
+              $isDisabled={!authenticatedUser}
+              onClick={onDownvoteClick}
+            />
           </Container.Score>
-          <Container.Actions>
-            {userId === authenticatedUser?.id ? (
-              <>
-                <Text.Action.Delete onClick={onDeleteClick}>
-                  <Icon.Delete />
-                  Delete
-                </Text.Action.Delete>
-                <Text.Action.Edit onClick={handleEditClick}>
-                  <Icon.Edit />
-                  Edit
-                </Text.Action.Edit>
-              </>
-            ) : (
-              <Text.Action.Reply onClick={handleReplyClick}>
-                <Icon.Reply />
-                Reply
-              </Text.Action.Reply>
-            )}
-          </Container.Actions>
+          {authenticatedUser && (
+            <Container.Actions>
+              {userId === authenticatedUser?.id ? (
+                <>
+                  <Text.Action.Delete onClick={onDeleteClick}>
+                    <Icon.Delete />
+                    Delete
+                  </Text.Action.Delete>
+                  <Text.Action.Edit onClick={handleEditClick}>
+                    <Icon.Edit />
+                    Edit
+                  </Text.Action.Edit>
+                </>
+              ) : (
+                <Text.Action.Reply onClick={handleReplyClick}>
+                  <Icon.Reply />
+                  Reply
+                </Text.Action.Reply>
+              )}
+            </Container.Actions>
+          )}
         </Container.Bottom>
       </Card>
       {isAddCommentCardVisible && (

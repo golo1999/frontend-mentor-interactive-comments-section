@@ -1,46 +1,21 @@
-﻿using server.Models.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using server.Models.Contexts;
+using server.Models.Entities;
 
 namespace server.Services.Repository
 {
-    public class UserRepository : IUserRepository
+    public class UserRepository(DatabaseContext context) : IUserRepository
     {
-        private static readonly List<User> _users = [
-            new() {
-                EmailAddress = "me@email.com",
-                Id = new Guid("6eb34ef1-018f-4c51-87c8-cab340dbdd25"),
-                Username = "me"
-            },
-            new() {
-                EmailAddress = "amyrobson@email.com",
-                Id = new Guid("6eb34ef1-018f-4c51-87c8-cab340dbdd26"),
-                Username = "amyrobson"
-            },
-            new() {
-                EmailAddress = "maxblagun@email.com",
-                Id = new Guid("6eb34ef1-018f-4c51-87c8-cab340dbdd27"),
-                Username = "maxblagun"
-            },
-            new() {
-                EmailAddress = "ramsesmiron@email.com",
-                Id = new Guid("6eb34ef1-018f-4c51-87c8-cab340dbdd28"),
-                Username = "ramsesmiron"
-            }
-        ];
+        private readonly DatabaseContext _context = context;
 
-        // TODO: Make this method async after adding DbContext
-        public Task<User?> GetByEmailAddressAsync(string emailAddress)
+        public async Task<User?> GetByEmailAddressAsync(string emailAddress)
         {
-            var user = _users.Find(user => user.EmailAddress == emailAddress);
-
-            return Task.FromResult(user);
+            return await _context.Users.FirstOrDefaultAsync(u => u.EmailAddress.Equals(emailAddress));
         }
 
-        // TODO: Make this method async after adding DbContext
-        public Task<User?> GetByIdAsync(Guid id)
+        public async Task<User?> GetByIdAsync(Guid id)
         {
-            var user = _users.Find(user => user.Id == id);
-
-            return Task.FromResult(user);
+            return await _context.Users.FirstOrDefaultAsync(u => u.Id.Equals(id));
         }
     }
 }
