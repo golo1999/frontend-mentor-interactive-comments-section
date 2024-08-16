@@ -24,7 +24,7 @@ async function patchCommentMutation({
   const { data } = await axios.patch<Comment>(url, JSON.stringify(operations), {
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json-patch+json",
+      "Content-Type": "application/json",
     },
   });
 

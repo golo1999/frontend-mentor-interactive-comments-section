@@ -16,7 +16,7 @@ async function postCommentMutation({ commentDTO, instance }: Props) {
   const { data } = await axios.post<Comment>(url, JSON.stringify(commentDTO), {
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json-patch+json",
+      "Content-Type": "application/json",
     },
   });
 

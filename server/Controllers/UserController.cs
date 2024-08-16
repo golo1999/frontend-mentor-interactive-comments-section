@@ -23,7 +23,7 @@ namespace server.Controllers
 
             if (user is null)
             {
-                return NotFound("The user could not be found.");
+                return NotFound("The user does not exist.");
             }
 
             return Ok(user);
@@ -41,7 +41,7 @@ namespace server.Controllers
 
             if (user is null)
             {
-                return NotFound("The user could not be found.");
+                return NotFound("The user does not exist.");
             }
 
             return Ok(user);

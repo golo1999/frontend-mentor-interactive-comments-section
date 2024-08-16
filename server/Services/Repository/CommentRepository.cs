@@ -17,7 +17,7 @@ namespace server.Services.Repository
             return createdComment.Entity;
         }
 
-        public async Task<Comment?> DeleteAsync(Guid userId, Guid id, Guid? parentId)
+        public async Task<Comment?> DeleteAsync(Guid userId, Guid id, Guid? parentId = null)
         {
             var comment = await GetByIdAsync(id, parentId);
 
@@ -32,9 +32,9 @@ namespace server.Services.Repository
             return comment;
         }
 
-        // TODO: Optimize
         public async Task<IEnumerable<Comment>> GetAllAsync()
         {
+            // Retrieving first-level comments
             var comments = await _context.Comments.Where(c => c.ParentId == null).ToListAsync();
 
             foreach (var comment in comments)
@@ -46,27 +46,21 @@ namespace server.Services.Repository
 
                 comment.Replies = (await GetRepliesByIdAsync(comment.Id)).ToList();
                 comment.User = await _context.Users.FirstAsync(u => u.Id.Equals(comment.UserId));
-                comment.Votes = (await GetVotesByIdAsync(comment.Id)).ToList();
+                comment.Votes = (await GetVotesByIdAsync(comment.Id, comment.ParentId)).ToList();
             }
 
             // Sorting descending by score
             comments.Sort((comment1, comment2) =>
             {
                 var result = comment2.Score.CompareTo(comment1.Score);
-
                 // If two comments have the same score, sorting by "dateTime" field
-                if (result == 0)
-                {
-                    return comment1.DateTime.CompareTo(comment2.DateTime);
-                }
-
-                return result;
+                return result == 0 ? comment1.DateTime.CompareTo(comment2.DateTime) : result;
             });
 
             return comments;
         }
 
-        public async Task<Comment?> GetByIdAsync(Guid id, Guid? parentId)
+        public async Task<Comment?> GetByIdAsync(Guid id, Guid? parentId = null)
         {
             Comment? comment;
 
@@ -91,7 +85,7 @@ namespace server.Services.Repository
 
             comment.Replies = (await GetRepliesByIdAsync(comment.Id)).ToList();
             comment.User = await _context.Users.FirstAsync(u => u.Id.Equals(comment.UserId));
-            comment.Votes = (await GetVotesByIdAsync(comment.Id)).ToList();
+            comment.Votes = (await GetVotesByIdAsync(comment.Id, comment.ParentId)).ToList();
 
             return comment;
         }
@@ -103,7 +97,7 @@ namespace server.Services.Repository
             foreach (var reply in replies)
             {
                 reply.User = await _context.Users.FirstAsync(u => u.Id.Equals(reply.UserId));
-                reply.Votes = (await GetVotesByIdAsync(reply.Id)).ToList();
+                reply.Votes = (await GetVotesByIdAsync(reply.Id, reply.ParentId)).ToList();
             }
 
             replies.Sort((reply1, reply2) => reply1.DateTime.CompareTo(reply2.DateTime));
@@ -111,12 +105,12 @@ namespace server.Services.Repository
             return replies;
         }
 
-        public async Task<IEnumerable<Vote>> GetVotesByIdAsync(Guid id)
+        public async Task<IEnumerable<Vote>> GetVotesByIdAsync(Guid id, Guid? parentId = null)
         {
-            return await _context.Votes.Where(v => v.CommentId.Equals(id)).ToListAsync();
+            return await _context.Votes.Where(v => v.CommentId.Equals(id) && v.ParentCommentId.Equals(parentId)).ToListAsync();
         }
 
-        public async Task<Comment?> PatchAsync(Guid id, Guid? parentId, JsonPatchDocument<Comment> patch)
+        public async Task<Comment?> PatchAsync(Guid id, JsonPatchDocument<Comment> patch, Guid? parentId = null)
         {
             var comment = await GetByIdAsync(id, parentId);
 

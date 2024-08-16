@@ -45,6 +45,7 @@ export const COMMENTS: Comment[] = [
           {
             commentId: "comment-2",
             id: "vote-3",
+            parentCommentId: "comment-1",
             type: "UP",
             userId: "me",
           },

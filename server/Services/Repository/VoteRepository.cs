@@ -23,9 +23,9 @@ namespace server.Services.Repository
             return createdVote.Entity;
         }
 
-        public async Task<Vote?> DeleteByCommentIdAsync(Guid userId, Guid commentId)
+        public async Task<Vote?> DeleteByCommentIdAsync(Guid userId, Guid commentId, Guid? parentCommentId = null)
         {
-            var vote = await GetByCommentIdAsync(userId, commentId);
+            var vote = await GetByCommentIdAsync(userId, commentId, parentCommentId);
 
             if (vote is null)
             {
@@ -38,24 +38,24 @@ namespace server.Services.Repository
             return vote;
         }
 
-        public async Task<IEnumerable<Vote>> GetAllByCommentIdAsync(Guid commentId)
+        public async Task<IEnumerable<Vote>> GetAllByCommentIdAsync(Guid commentId, Guid? parentCommentId = null)
         {
-            return await _context.Votes.Where(v => v.CommentId.Equals(commentId)).ToListAsync();
+            return await _context.Votes.Where(v => v.CommentId.Equals(commentId) && v.ParentCommentId.Equals(parentCommentId)).ToListAsync();
         }
 
-        public async Task<Vote?> GetByCommentIdAsync(Guid userId, Guid commentId)
+        public async Task<Vote?> GetByCommentIdAsync(Guid userId, Guid commentId, Guid? parentCommentId = null)
         {
-            return await _context.Votes.FirstOrDefaultAsync(v => v.CommentId.Equals(commentId) && v.UserId.Equals(userId));
+            return await _context.Votes.FirstOrDefaultAsync(v => v.CommentId.Equals(commentId) && v.ParentCommentId.Equals(parentCommentId) && v.UserId.Equals(userId));
         }
 
-        public async Task<Vote?> GetByIdAsync(Guid id)
+        public async Task<Vote?> GetByIdAsync(Guid id, Guid? parentCommentId = null)
         {
-            return await _context.Votes.FirstOrDefaultAsync(v => v.Id.Equals(id));
+            return await _context.Votes.FirstOrDefaultAsync(v => v.Id.Equals(id) && v.ParentCommentId.Equals(parentCommentId));
         }
 
-        public async Task<Vote?> PatchByCommentIdAsync(Guid userId, Guid commentId, JsonPatchDocument<Vote> patch)
+        public async Task<Vote?> PatchByCommentIdAsync(Guid userId, Guid commentId, JsonPatchDocument<Vote> patch, Guid? parentCommentId = null)
         {
-            var vote = await GetByCommentIdAsync(userId, commentId);
+            var vote = await GetByCommentIdAsync(userId, commentId, parentCommentId);
 
             if (vote is null)
             {

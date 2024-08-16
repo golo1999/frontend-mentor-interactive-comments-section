@@ -26,6 +26,11 @@ namespace server.Controllers
                 return BadRequest("The commentId is not valid.");
             }
 
+            if (voteDTO.ParentCommentId is not null && !Guid.TryParse(voteDTO.ParentCommentId.ToString(), out _))
+            {
+                return BadRequest("The parentCommentId is not valid.");
+            }
+
             if (!voteDTO.Type.Equals(VoteType.DOWN) && !voteDTO.Type.Equals(VoteType.UP))
             {
                 return BadRequest("The type must be \"DOWN\" (0) or \"UP\" (1).");
@@ -50,58 +55,68 @@ namespace server.Controllers
         }
 
         [HttpDelete("{commentId}")]
-        public async Task<ActionResult<Vote?>> DeleteByCommentId([FromRoute] Guid commentId)
+        public async Task<ActionResult<Vote?>> DeleteByCommentId([FromRoute] Guid commentId, Guid? parentCommentId = null)
         {
             if (!Guid.TryParse(commentId.ToString(), out _))
             {
                 return BadRequest("The commentId is not valid.");
             }
 
+            if (parentCommentId is not null && !Guid.TryParse(parentCommentId.ToString(), out _))
+            {
+                return BadRequest("The parentCommentId is not valid.");
+            }
+
             var currentUser = await _userService.GetByEmailAddress("me@email.com");
-            var deletedVote = await _voteService.DeleteByCommentId(currentUser.Id, commentId);
+            var deletedVote = await _voteService.DeleteByCommentId(currentUser.Id, commentId, parentCommentId);
 
             if (deletedVote is null)
             {
-                return NotFound("The vote could not be found.");
+                return NotFound("The vote does not exist.");
             }
 
             return Ok(deletedVote);
         }
 
         [HttpGet("{commentId}/all")]
-        public async Task<ActionResult<Vote>> GetAllByCommentId([FromRoute] Guid commentId)
+        public async Task<ActionResult<Vote>> GetAllByCommentId([FromRoute] Guid commentId, Guid? parentCommentId = null)
         {
             if (!Guid.TryParse(commentId.ToString(), out _))
             {
                 return BadRequest("The commentId is not valid.");
             }
 
-            var votes = await _voteService.GetAllByCommentId(commentId);
+            var votes = await _voteService.GetAllByCommentId(commentId, parentCommentId);
 
             return Ok(votes);
         }
 
         [HttpGet("{commentId}")]
-        public async Task<ActionResult<Vote?>> GetByCommentId([FromRoute] Guid commentId)
+        public async Task<ActionResult<Vote?>> GetByCommentId([FromRoute] Guid commentId, Guid? parentCommentId = null)
         {
             if (!Guid.TryParse(commentId.ToString(), out _))
             {
                 return BadRequest("The commentId is not valid.");
             }
 
+            if (parentCommentId is not null && !Guid.TryParse(parentCommentId.ToString(), out _))
+            {
+                return BadRequest("The commentId is not valid.");
+            }
+
             var currentUser = await _userService.GetByEmailAddress("me@email.com");
-            var vote = await _voteService.GetByCommentId(currentUser.Id, commentId);
+            var vote = await _voteService.GetByCommentId(currentUser.Id, commentId, parentCommentId);
 
             if (vote is null)
             {
-                return NotFound("The vote could not be found.");
+                return NotFound("The vote does not exist.");
             }
 
             return Ok(vote);
         }
 
         [HttpPatch("{commentId}")]
-        public async Task<ActionResult<Vote?>> Patch([FromRoute] Guid commentId, [FromBody] JsonPatchDocument<Vote> patch)
+        public async Task<ActionResult<Vote?>> Patch([FromRoute] Guid commentId, [FromBody] JsonPatchDocument<Vote> patch, Guid? parentCommentId = null)
         {
             if (!Guid.TryParse(commentId.ToString(), out _))
             {
@@ -109,11 +124,11 @@ namespace server.Controllers
             }
 
             var currentUser = await _userService.GetByEmailAddress("me@email.com");
-            var patchedVote = await _voteService.PatchByCommentId(currentUser.Id, commentId, patch);
+            var patchedVote = await _voteService.PatchByCommentId(currentUser.Id, commentId, patch, parentCommentId);
 
             if (patchedVote is null)
             {
-                return NotFound("The vote could not be found.");
+                return NotFound("The vote does not exist.");
             }
 
             return Ok(patchedVote);

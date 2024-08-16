@@ -13,14 +13,22 @@ namespace server.Services.Service
 
         public async Task<Vote> Create(Vote vote)
         {
-            if (await _commentService.Value.GetById(vote.CommentId) is null)
-            {
-                throw new Exception("The comment does not exist.");
-            }
-
             if (await _userService.GetById(vote.UserId) is null)
             {
                 throw new Exception("The user does not exist.");
+            }
+
+            if (vote.ParentCommentId is not null && await _commentService.Value.GetById((Guid)vote.ParentCommentId) is null)
+            {
+                throw new Exception("The parent comment does not exist.");
+            }
+
+            var comment = await _commentService.Value.GetById(vote.CommentId, vote.ParentCommentId) ?? throw new Exception("The comment does not exist.");
+            var currentUser = await _userService.GetByEmailAddress("me@email.com");
+
+            if (comment.UserId.Equals(currentUser.Id))
+            {
+                throw new Exception("You cannot vote your own comment.");
             }
 
             vote.Id = Guid.NewGuid();
@@ -33,41 +41,57 @@ namespace server.Services.Service
             return await _voteRepository.CreateAsync(vote) ?? throw new Exception("The vote could not be created.");
         }
 
-        public async Task<Vote> DeleteByCommentId(Guid userId, Guid commentId)
+        public async Task<Vote> DeleteByCommentId(Guid userId, Guid commentId, Guid? parentCommentId = null)
         {
-            if (await _commentService.Value.GetById(commentId) is null)
-            {
-                throw new Exception("The comment does not exist.");
-            }
-
             if (await _userService.GetById(userId) is null)
             {
                 throw new Exception("The user does not exist.");
+            }
+
+            if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
+            {
+                throw new Exception("The parent comment does not exist.");
+            }
+
+            if (await _commentService.Value.GetById(commentId, parentCommentId) is null)
+            {
+                throw new Exception("The comment does not exist.");
             }
 
             var currentUser = await _userService.GetByEmailAddress("me@email.com");
+            var vote = await GetByCommentId(userId, commentId, parentCommentId);
 
-            if (!userId.Equals(currentUser?.Id))
+            if (!vote.UserId.Equals(currentUser.Id))
             {
-                throw new Exception("You cannot delete other user's vote.");
+                throw new Exception("You cannot delete other user's comment.");
             }
 
-            return await _voteRepository.DeleteByCommentIdAsync(userId, commentId) ?? throw new Exception("The vote could not be deleted.");
+            return await _voteRepository.DeleteByCommentIdAsync(userId, commentId, parentCommentId) ?? throw new Exception("The vote could not be deleted.");
         }
 
-        public async Task<IEnumerable<Vote>> GetAllByCommentId(Guid commentId)
+        public async Task<IEnumerable<Vote>> GetAllByCommentId(Guid commentId, Guid? parentCommentId = null)
         {
-            if (await _commentService.Value.GetById(commentId) is null)
+            if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
+            {
+                throw new Exception("The parent comment does not exist.");
+            }
+
+            if (await _commentService.Value.GetById(commentId, parentCommentId) is null)
             {
                 throw new Exception("The comment does not exist.");
             }
 
-            return await _voteRepository.GetAllByCommentIdAsync(commentId);
+            return await _voteRepository.GetAllByCommentIdAsync(commentId, parentCommentId);
         }
 
-        public async Task<Vote> GetByCommentId(Guid userId, Guid commentId)
+        public async Task<Vote> GetByCommentId(Guid userId, Guid commentId, Guid? parentCommentId = null)
         {
-            if (await _commentService.Value.GetById(commentId) is null)
+            if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
+            {
+                throw new Exception("The parent comment does not exist.");
+            }
+
+            if (await _commentService.Value.GetById(commentId, parentCommentId) is null)
             {
                 throw new Exception("The comment does not exist.");
             }
@@ -77,12 +101,17 @@ namespace server.Services.Service
                 throw new Exception("The user does not exist.");
             }
 
-            return await _voteRepository.GetByCommentIdAsync(userId, commentId) ?? throw new Exception("The vote could does not exist.");
+            return await _voteRepository.GetByCommentIdAsync(userId, commentId, parentCommentId) ?? throw new Exception("The vote does not exist.");
         }
 
-        public async Task<Vote> PatchByCommentId(Guid userId, Guid commentId, JsonPatchDocument<Vote> patch)
+        public async Task<Vote> PatchByCommentId(Guid userId, Guid commentId, JsonPatchDocument<Vote> patch, Guid? parentCommentId = null)
         {
-            if (await _commentService.Value.GetById(commentId) is null)
+            if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
+            {
+                throw new Exception("The parent comment does not exist.");
+            }
+
+            if (await _commentService.Value.GetById(commentId, parentCommentId) is null)
             {
                 throw new Exception("The comment does not exist.");
             }
@@ -99,7 +128,7 @@ namespace server.Services.Service
                 throw new Exception("You cannot patch other user's vote.");
             }
 
-            return await _voteRepository.PatchByCommentIdAsync(userId, commentId, patch) ?? throw new Exception("The vote could not be patched.");
+            return await _voteRepository.PatchByCommentIdAsync(userId, commentId, patch, parentCommentId) ?? throw new Exception("The vote could not be patched.");
         }
 
         public async Task<Comment> VoteByCommentId(VoteType voteType, Guid userId, Guid commentId, Guid? parentCommentId = null)
@@ -109,10 +138,15 @@ namespace server.Services.Service
                 throw new Exception("The user does not exist.");
             }
 
+            if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
+            {
+                throw new Exception("The parent comment does not exist.");
+            }
+
             var comment = await _commentService.Value.GetById(commentId, parentCommentId) ?? throw new Exception("The comment does not exist.");
             var patchDocument = new JsonPatchDocument<Comment>();
             var score = 0;
-            var userVote = await _voteRepository.GetByCommentIdAsync(userId, commentId);
+            var userVote = await _voteRepository.GetByCommentIdAsync(userId, commentId, parentCommentId);
 
             if (userVote is null)
             {
@@ -120,11 +154,12 @@ namespace server.Services.Service
                 {
                     CommentId = commentId,
                     Id = Guid.NewGuid(),
+                    ParentCommentId = parentCommentId,
                     Type = voteType,
                     UserId = userId
                 };
 
-                if (await _voteRepository.GetByIdAsync(newVote.Id) is not null)
+                if (await _voteRepository.GetByIdAsync(newVote.Id, newVote.ParentCommentId) is not null)
                 {
                     throw new Exception("A vote with the same Id already exists.");
                 }
@@ -138,7 +173,7 @@ namespace server.Services.Service
                 });
                 patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = score });
 
-                return await _commentService.Value.Patch(commentId, parentCommentId, patchDocument) ?? throw new Exception("The comment could not be created.");
+                return await _commentService.Value.Patch(commentId, patchDocument, parentCommentId) ?? throw new Exception("The comment could not be created.");
             }
 
             if (userVote.Type != voteType)
@@ -146,11 +181,11 @@ namespace server.Services.Service
                 var votePatchDocument = new JsonPatchDocument<Vote>();
                 votePatchDocument.Operations.Add(new() { op = "replace", path = "/type", value = voteType });
 
-                _ = await _voteRepository.PatchByCommentIdAsync(userId, commentId, votePatchDocument) ?? throw new Exception("The vote could not be patched.");
+                _ = await _voteRepository.PatchByCommentIdAsync(userId, commentId, votePatchDocument, parentCommentId) ?? throw new Exception("The vote could not be patched.");
             }
             else
             {
-                _ = await _voteRepository.DeleteByCommentIdAsync(userId, commentId) ?? throw new Exception("The vote could not be deleted.");
+                _ = await _voteRepository.DeleteByCommentIdAsync(userId, commentId, parentCommentId) ?? throw new Exception("The vote could not be deleted.");
             }
 
             score = comment.Votes.Aggregate(score, (currentScore, vote) => vote.Type switch
@@ -161,7 +196,7 @@ namespace server.Services.Service
             });
             patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = score });
 
-            return await _commentService.Value.Patch(commentId, parentCommentId, patchDocument) ?? throw new Exception("The comment could not be patched.");
+            return await _commentService.Value.Patch(commentId, patchDocument, parentCommentId) ?? throw new Exception("The comment could not be patched.");
         }
     }
 }

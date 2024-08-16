@@ -66,7 +66,7 @@ namespace server.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<Comment?>> Delete([FromRoute] Guid id, Guid? parentId)
+        public async Task<ActionResult<Comment?>> Delete([FromRoute] Guid id, Guid? parentId = null)
         {
             if (!Guid.TryParse(id.ToString(), out _))
             {
@@ -83,7 +83,7 @@ namespace server.Controllers
 
             if (deletedComment is null)
             {
-                return NotFound("The comment could not be found.");
+                return NotFound("The comment does not exist.");
             }
 
             return Ok(deletedComment);
@@ -98,7 +98,7 @@ namespace server.Controllers
         }
 
         [HttpPatch("{id}")]
-        public async Task<ActionResult<Vote?>> Patch([FromRoute] Guid id, Guid? parentId, [FromBody] JsonPatchDocument<Comment> patch)
+        public async Task<ActionResult<Vote?>> Patch([FromRoute] Guid id, [FromBody] JsonPatchDocument<Comment> patch, Guid? parentId = null)
         {
             if (!Guid.TryParse(id.ToString(), out _))
             {
@@ -110,11 +110,11 @@ namespace server.Controllers
                 return BadRequest("The parentId is not valid.");
             }
 
-            var patchedComment = await _commentService.Patch(id, parentId, patch);
+            var patchedComment = await _commentService.Patch(id, patch, parentId);
 
             if (patchedComment is null)
             {
-                return NotFound("The comment could not be found.");
+                return NotFound("The comment does not exist.");
             }
 
             return Ok(patchedComment);
@@ -143,7 +143,7 @@ namespace server.Controllers
 
             if (votedComment is null)
             {
-                return NotFound("The comment could not be found.");
+                return NotFound("The comment does not exist.");
             }
 
             return Ok(votedComment);

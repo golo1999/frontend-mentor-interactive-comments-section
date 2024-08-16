@@ -38,7 +38,7 @@ namespace server.Services.Service
             comment.DateTime = DateTime.UtcNow;
             comment.Id = Guid.NewGuid();
 
-            if (await _commentRepository.GetByIdAsync(comment.Id) is not null)
+            if (await _commentRepository.GetByIdAsync(comment.Id, comment.ParentId) is not null)
             {
                 throw new Exception("A comment with the same id already exists.");
             }
@@ -79,9 +79,9 @@ namespace server.Services.Service
             return await _commentRepository.GetByIdAsync(id, parentId) ?? throw new Exception("The comment does not exist.");
         }
 
-        public async Task<Comment> Patch(Guid id, Guid? parentId, JsonPatchDocument<Comment> patch)
+        public async Task<Comment> Patch(Guid id, JsonPatchDocument<Comment> patch, Guid? parentId = null)
         {
-            return await _commentRepository.PatchAsync(id, parentId, patch) ?? throw new Exception("The comment could not be patched.");
+            return await _commentRepository.PatchAsync(id, patch, parentId) ?? throw new Exception("The comment could not be patched.");
         }
 
         public async Task<Comment> Vote(VoteType voteType, Guid userId, Guid id, Guid? parentId = null)

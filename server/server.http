@@ -1,6 +1,82 @@
-@server_HostAddress = http://localhost:5225
+@server_HostAddress = https://localhost:7105
 
-GET {{server_HostAddress}}/weatherforecast/
-Accept: application/json
+POST {{server_HostAddress}}/api/comment
+Content-Type: application/json
+
+{
+  "parentId": "fca3c54d-941c-42c6-8c2a-42a0f97dcf70",
+  "replyToUserId": "6eb34ef1-018f-4c51-87c8-cab340dbdd27",
+  "text": "New comment"
+}
+
+###
+
+PATCH {{server_HostAddress}}/api/comment/62b95d99-b094-468c-8721-9342567e5a65?parentId=fca3c54d-941c-42c6-8c2a-42a0f97dcf70
+Content-Type: application/json
+
+[
+  {
+    "path": "/text",
+    "op": "replace",
+    "value": "Patched comment"
+  }
+]
+
+###
+
+DELETE {{server_HostAddress}}/api/comment/62b95d99-b094-468c-8721-9342567e5a65?parentId=fca3c54d-941c-42c6-8c2a-42a0f97dcf70
+
+###
+
+PATCH {{server_HostAddress}}/api/comment/6eb34ef1-018f-4c51-87c8-cab340dbdd15/vote?voteType=1&parentId=fca3c54d-941c-42c6-8c2a-42a0f97dcf70
+Content-Type: application/json
+
+###
+
+GET {{server_HostAddress}}/api/comment/all
+
+###
+
+GET {{server_HostAddress}}/api/user/email/me@email.com
+
+###
+
+GET {{server_HostAddress}}/api/user/id/6eb34ef1-018f-4c51-87c8-cab340dbdd25
+
+###
+
+POST {{server_HostAddress}}/api/vote
+Content-Type: application/json
+
+{
+  "commentId": "6eb34ef1-018f-4c51-87c8-cab340dbdd15",
+  "parentCommentId": "fca3c54d-941c-42c6-8c2a-42a0f97dcf70",
+  "type": 0
+}
+
+###
+
+PATCH {{server_HostAddress}}/api/vote/6eb34ef1-018f-4c51-87c8-cab340dbdd15?parentCommentId=fca3c54d-941c-42c6-8c2a-42a0f97dcf70
+Content-Type: application/json
+
+[
+  {
+    "path": "/type",
+    "op": "replace",
+    "value": 1
+  }
+]
+
+###
+
+DELETE {{server_HostAddress}}/api/vote/6eb34ef1-018f-4c51-87c8-cab340dbdd15?parentCommentId=fca3c54d-941c-42c6-8c2a-42a0f97dcf70
+
+###
+
+GET {{server_HostAddress}}/api/vote/6eb34ef1-018f-4c51-87c8-cab340dbdd15?parentCommentId=fca3c54d-941c-42c6-8c2a-42a0f97dcf70
+
+###
+
+GET {{server_HostAddress}}/api/vote/6eb34ef1-018f-4c51-87c8-cab340dbdd15/all?parentCommentId=fca3c54d-941c-42c6-8c2a-42a0f97dcf70
 
 ###
