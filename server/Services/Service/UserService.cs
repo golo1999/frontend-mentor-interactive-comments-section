@@ -9,7 +9,7 @@ namespace server.Services.Service
 
         public async Task<User> GetByEmailAddress(string emailAddress)
         {
-            return await _repository.GetByEmailAddressAsync(emailAddress) ?? throw new Exception("The  user does not exist.");
+            return await _repository.GetByEmailAddressAsync(emailAddress) ?? throw new Exception("The user does not exist.");
         }
 
         public async Task<User> GetById(Guid id)
