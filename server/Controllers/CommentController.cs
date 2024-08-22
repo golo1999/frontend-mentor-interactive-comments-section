@@ -5,6 +5,7 @@ using server.Models.DTOs;
 using server.Models.Entities;
 using server.Models.Enums;
 using server.Services.Service;
+using System.ComponentModel.DataAnnotations;
 
 namespace server.Controllers
 {
@@ -93,6 +94,14 @@ namespace server.Controllers
         public async Task<IActionResult> GetAll()
         {
             var comments = await _commentService.GetAll();
+
+            return Ok(comments);
+        }
+
+        [HttpGet("all/paginated")]
+        public async Task<IActionResult> GetAll([Required] int first, Guid? after = null)
+        {
+            var comments = await _commentService.GetAll(first, after);
 
             return Ok(comments);
         }

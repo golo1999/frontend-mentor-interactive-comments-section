@@ -1,4 +1,4 @@
-import { Comment, User } from "models";
+import { Comment, Edge, PaginatedResult, User } from "models";
 
 export const COMMENTS: Comment[] = [
   {
@@ -91,6 +91,23 @@ export const COMMENTS: Comment[] = [
     ],
   },
 ];
+
+export const DEFAULT_PAGINATED_COMMENTS: PaginatedResult<Comment> = {
+  edges: [],
+  pageInfo: { endCursor: null, hasNextPage: false },
+  totalCount: 0,
+};
+
+export const PAGINATED_COMMENTS: PaginatedResult<Comment> = {
+  edges: [
+    ...COMMENTS.map<Edge<Comment>>((mockedComment) => ({
+      cursor: mockedComment.id,
+      node: mockedComment,
+    })),
+  ],
+  pageInfo: { endCursor: COMMENTS[COMMENTS.length - 1].id, hasNextPage: false },
+  totalCount: COMMENTS.length,
+};
 
 export const USERS: User[] = [
   {

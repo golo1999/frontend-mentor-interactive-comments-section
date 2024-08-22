@@ -74,6 +74,11 @@ namespace server.Services.Service
             return await _commentRepository.GetAllAsync();
         }
 
+        public async Task<PaginatedResult<Comment>> GetAll(int first, Guid? after = null)
+        {
+            return await _commentRepository.GetAllAsync(first, after);
+        }
+
         public async Task<Comment> GetById(Guid id, Guid? parentId = null)
         {
             return await _commentRepository.GetByIdAsync(id, parentId) ?? throw new Exception("The comment does not exist.");

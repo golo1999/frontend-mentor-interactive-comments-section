@@ -1,6 +1,7 @@
 import { useMsal } from "@azure/msal-react";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "react-query";
 import styled from "styled-components";
 
 import {
@@ -11,6 +12,7 @@ import {
 import { Colors } from "colors";
 import { AddCommentCard, CommentsList, DeleteModal } from "components";
 import { useScrollLock } from "hooks";
+import { Comment, PaginatedResult } from "models";
 import {
   useAuthenticatedUserStore,
   useCommentsStore,
@@ -44,24 +46,51 @@ const Container = {
 export function HomePage() {
   const { authenticatedUser } = useAuthenticatedUserStore();
   const { comments, setComments } = useCommentsStore();
+  const { isSuccess: isDeleteSuccessful, mutate: deleteComment } =
+    useDeleteCommentMutation();
+  const { instance } = useMsal();
+  const [after, setAfter] = useState<string>();
+  const {
+    data: fetchedComments,
+    isFetching,
+    status: fetchCommentsStatus,
+  } = useGetCommentsQuery({ after, first: 5, instance });
   const {
     commentToDelete,
     isDeleteModalOpen,
     closeDeleteModal,
     setCommentToDelete,
   } = useModalsStore();
-  const { instance } = useMsal();
-  const { data: fetchedComments, status: fetchCommentsStatus } =
-    useGetCommentsQuery(instance);
-  const { mutate: deleteComment } = useDeleteCommentMutation();
-  const { mutate: postComment } = usePostCommentMutation();
+  const queryClient = useQueryClient();
+  const { isSuccess: isPostSuccessful, mutate: postComment } =
+    usePostCommentMutation();
   const { unlockScroll } = useScrollLock();
 
-  useEffect(() => {
-    if (fetchedComments) {
-      setComments(fetchedComments);
+  const setMainList = useCallback(() => {
+    const mainList =
+      queryClient.getQueryData<PaginatedResult<Comment>>("comments");
+
+    if (mainList) {
+      setComments(mainList.edges.map(({ node }) => node));
     }
-  }, [fetchedComments, setComments]);
+  }, [queryClient, setComments]);
+
+  useEffect(() => setMainList(), [fetchedComments, setMainList]);
+
+  useEffect(() => {
+    if (isDeleteSuccessful || isPostSuccessful) {
+      setMainList();
+    }
+  }, [isDeleteSuccessful, isPostSuccessful, setMainList]);
+
+  function handleCommentsListEndReached() {
+    if (
+      fetchedComments?.pageInfo.hasNextPage &&
+      after !== fetchedComments?.pageInfo.endCursor
+    ) {
+      setAfter(fetchedComments?.pageInfo.endCursor || undefined);
+    }
+  }
 
   function handleDeleteModalClose() {
     setCommentToDelete(undefined);
@@ -96,7 +125,12 @@ export function HomePage() {
 
   return (
     <Container.Main>
-      {comments.length > 0 && <CommentsList />}
+      {comments.length > 0 && (
+        <CommentsList
+          isFetching={isFetching}
+          onEndReached={handleCommentsListEndReached}
+        />
+      )}
       {authenticatedUser && (
         <AddCommentCard
           onButtonClick={(newComment) =>

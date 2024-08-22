@@ -8,6 +8,7 @@ namespace server.Services.Repository
         Task<Comment> CreateAsync(Comment comment);
         Task<Comment?> DeleteAsync(Guid userId, Guid id, Guid? parentId = null);
         Task<IEnumerable<Comment>> GetAllAsync();
+        Task<PaginatedResult<Comment>> GetAllAsync(int first, Guid? after = null);
         Task<Comment?> GetByIdAsync(Guid id, Guid? parentId = null);
         Task<Comment?> PatchAsync(Guid id, JsonPatchDocument<Comment> patch, Guid? parentId = null);
     }

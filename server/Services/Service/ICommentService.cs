@@ -9,6 +9,7 @@ namespace server.Services.Service
         public Task<Comment> Create(Comment comment);
         public Task<Comment> Delete(Guid userId, Guid id, Guid? parentId = null);
         public Task<IEnumerable<Comment>> GetAll();
+        public Task<PaginatedResult<Comment>> GetAll(int first, Guid? after = null);
         public Task<Comment> GetById(Guid id, Guid? parentId = null);
         public Task<Comment> Patch(Guid id, JsonPatchDocument<Comment> patch, Guid? parentId = null);
         public Task<Comment> Vote(VoteType voteType, Guid userId, Guid id, Guid? parentId = null);

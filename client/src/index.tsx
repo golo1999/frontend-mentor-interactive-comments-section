@@ -18,7 +18,16 @@ const root = ReactDOM.createRoot(
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
-export const queryClient = new QueryClient();
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // 1 hour in ms
+      cacheTime: 1000 * 60 * 60,
+      // 1 hour in ms
+      staleTime: 1000 * 60 * 60,
+    },
+  },
+});
 
 root.render(
   <React.StrictMode>

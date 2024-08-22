@@ -3,7 +3,8 @@ import { IPublicClientApplication } from "@azure/msal-browser";
 import axios from "axios";
 import { useMutation, useQueryClient } from "react-query";
 
-import { Comment, Operation } from "models";
+import { Comment, Operation, PaginatedResult } from "models";
+import { DEFAULT_PAGINATED_COMMENTS } from "mocks";
 
 interface Props {
   id: string;
@@ -38,32 +39,44 @@ export function usePatchCommentMutation() {
     mutationFn: async ({ id, instance, operations, parentId }) =>
       patchCommentMutation({ id, instance, operations, parentId }),
     onSuccess: (patchedComment, { id, parentId }) => {
-      const existingComments = queryClient.getQueryData<Comment[]>("comments");
-      let newComments: Comment[];
+      const existingComments =
+        queryClient.getQueryData<PaginatedResult<Comment>>("comments") ||
+        DEFAULT_PAGINATED_COMMENTS;
+      let updatedComments: PaginatedResult<Comment>;
 
       // First-level comment
       if (!parentId) {
-        newComments =
-          existingComments?.map((existingComment) =>
-            existingComment.id === id ? patchedComment : existingComment
-          ) || [];
+        updatedComments = {
+          ...existingComments,
+          edges: existingComments.edges.map((edge) =>
+            edge.cursor === id ? { ...edge, node: patchedComment } : edge
+          ),
+        };
       } else {
-        newComments =
-          existingComments?.map((existingComment) => {
-            if (existingComment.id === parentId) {
+        updatedComments = {
+          ...existingComments,
+          edges: existingComments.edges.map((edge) => {
+            if (edge.cursor === parentId) {
               return {
-                ...existingComment,
-                replies: existingComment.replies.map((existingReply) =>
-                  existingReply.id === id ? patchedComment : existingReply
-                ),
+                ...edge,
+                node: {
+                  ...edge.node,
+                  replies: edge.node.replies.map((existingReply) =>
+                    existingReply.id === id ? patchedComment : existingReply
+                  ),
+                },
               };
             }
 
-            return existingComment;
-          }) || [];
+            return edge;
+          }),
+        };
       }
 
-      queryClient.setQueryData<Comment[]>("comments", newComments);
+      queryClient.setQueryData<PaginatedResult<Comment>>(
+        "comments",
+        updatedComments
+      );
     },
   });
 }

@@ -3,7 +3,8 @@ import { IPublicClientApplication } from "@azure/msal-browser";
 import axios from "axios";
 import { useQueryClient, useMutation } from "react-query";
 
-import { Comment } from "models";
+import { Comment, PaginatedResult } from "models";
+import { DEFAULT_PAGINATED_COMMENTS } from "mocks";
 import { VoteType } from "types";
 
 interface Props {
@@ -36,32 +37,44 @@ export function useVoteCommentMutation() {
     mutationFn: async ({ id, instance, parentId, voteType }) =>
       voteCommentMutation({ id, instance, parentId, voteType }),
     onSuccess: (updatedComment, { id, parentId }) => {
-      const existingComments = queryClient.getQueryData<Comment[]>("comments");
-      let newComments: Comment[];
+      const existingComments =
+        queryClient.getQueryData<PaginatedResult<Comment>>("comments") ||
+        DEFAULT_PAGINATED_COMMENTS;
+      let updatedComments: PaginatedResult<Comment>;
 
       // First-level comment
       if (!parentId) {
-        newComments =
-          existingComments?.map((existingComment) =>
-            existingComment.id === id ? updatedComment : existingComment
-          ) || [];
+        updatedComments = {
+          ...existingComments,
+          edges: existingComments.edges.map((edge) =>
+            edge.cursor === id ? { ...edge, node: updatedComment } : edge
+          ),
+        };
       } else {
-        newComments =
-          existingComments?.map((existingComment) => {
-            if (existingComment.id === parentId) {
+        updatedComments = {
+          ...existingComments,
+          edges: existingComments.edges.map((edge) => {
+            if (edge.cursor === parentId) {
               return {
-                ...existingComment,
-                replies: existingComment.replies.map((existingReply) =>
-                  existingReply.id === id ? updatedComment : existingReply
-                ),
+                ...edge,
+                node: {
+                  ...edge.node,
+                  replies: edge.node.replies.map((existingReply) =>
+                    existingReply.id === id ? updatedComment : existingReply
+                  ),
+                },
               };
             }
 
-            return existingComment;
-          }) || [];
+            return edge;
+          }),
+        };
       }
 
-      queryClient.setQueryData<Comment[]>("comments", newComments);
+      queryClient.setQueryData<PaginatedResult<Comment>>(
+        "comments",
+        updatedComments
+      );
     },
   });
 }

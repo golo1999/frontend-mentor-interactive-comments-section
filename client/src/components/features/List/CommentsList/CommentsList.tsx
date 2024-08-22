@@ -1,5 +1,9 @@
 import { useMsal } from "@azure/msal-react";
 
+import { Fragment, useEffect } from "react";
+import { useQueryClient } from "react-query";
+import { Waypoint } from "react-waypoint";
+
 import {
   usePatchCommentMutation,
   usePostCommentMutation,
@@ -7,7 +11,7 @@ import {
 } from "api";
 import { CommentCard } from "components";
 import { useScrollLock } from "hooks";
-import { Comment, Operation } from "models";
+import { Comment, Operation, PaginatedResult } from "models";
 import {
   useAuthenticatedUserStore,
   useCommentsStore,
@@ -17,29 +21,55 @@ import { AddCommentCardType, VoteType } from "types";
 
 import { RepliesList } from "../RepliesList";
 
-import { Container } from "./CommentsList.style";
+import { Container, Text } from "./CommentsList.style";
+
+interface Props {
+  isFetching: boolean;
+  onEndReached: () => void;
+}
 
 // First-level comments list
-export function CommentsList() {
+export function CommentsList({ isFetching, onEndReached }: Props) {
   const { authenticatedUser } = useAuthenticatedUserStore();
-  const { comments } = useCommentsStore();
+  const { comments, setComments } = useCommentsStore();
   const { openDeleteModal, setCommentToDelete } = useModalsStore();
   const { instance } = useMsal();
-  const { mutate: patchComment } = usePatchCommentMutation();
-  const { mutate: postComment } = usePostCommentMutation();
+  const queryClient = useQueryClient();
+  const { isSuccess: isPatchSuccessful, mutate: patchComment } =
+    usePatchCommentMutation();
+  const { isSuccess: isPostSuccessful, mutate: postComment } =
+    usePostCommentMutation();
   const { lockScroll } = useScrollLock();
-  const { mutate: voteComment } = useVoteCommentMutation();
+  const { isSuccess: isVoteSuccessful, mutate: voteComment } =
+    useVoteCommentMutation();
+
+  useEffect(() => {
+    if (isPatchSuccessful || isPostSuccessful || isVoteSuccessful) {
+      const mainList =
+        queryClient.getQueryData<PaginatedResult<Comment>>("comments");
+
+      if (mainList) {
+        setComments(mainList.edges.map(({ node }) => node));
+      }
+    }
+  }, [
+    isPatchSuccessful,
+    isPostSuccessful,
+    isVoteSuccessful,
+    queryClient,
+    setComments,
+  ]);
 
   function handleButtonClick(newReply: Comment, type: AddCommentCardType) {
-    const operations: Operation[] = [
-      {
-        path: "/text",
-        op: "replace",
-        value: newReply.text,
-      },
-    ];
-
     if (type === "UPDATE") {
+      const operations: Operation[] = [
+        {
+          path: "/text",
+          op: "replace",
+          value: newReply.text,
+        },
+      ];
+
       patchComment({
         id: newReply.id,
         instance,
@@ -66,22 +96,29 @@ export function CommentsList() {
 
   return (
     <Container.Comments>
-      {comments.map((comment) => {
+      {comments.map((comment, index, items) => {
         const { id: commentId, replies: commentReplies } = comment;
 
         return (
-          <Container.CommentCard key={commentId}>
-            <CommentCard
-              comment={comment}
-              onButtonClick={handleButtonClick}
-              onDeleteClick={() => handleDeleteClick(comment)}
-              onDownvoteClick={() => handleVoteClick(comment, "DOWN")}
-              onUpvoteClick={() => handleVoteClick(comment, "UP")}
-            />
-            {commentReplies.length > 0 && (
-              <RepliesList replies={commentReplies} />
+          <Fragment key={commentId}>
+            <Container.CommentCard>
+              <CommentCard
+                comment={comment}
+                onButtonClick={handleButtonClick}
+                onDeleteClick={() => handleDeleteClick(comment)}
+                onDownvoteClick={() => handleVoteClick(comment, "DOWN")}
+                onUpvoteClick={() => handleVoteClick(comment, "UP")}
+              />
+              {commentReplies.length > 0 && (
+                <RepliesList replies={commentReplies} />
+              )}
+            </Container.CommentCard>
+            {index === items.length - 1 && (
+              <Waypoint onEnter={onEndReached}>
+                {isFetching ? <Text.Loading>Loading...</Text.Loading> : null}
+              </Waypoint>
             )}
-          </Container.CommentCard>
+          </Fragment>
         );
       })}
     </Container.Comments>

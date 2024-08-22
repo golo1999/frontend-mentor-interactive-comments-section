@@ -1,10 +1,11 @@
 import { IPublicClientApplication } from "@azure/msal-browser";
 
 import axios from "axios";
+import dayjs from "dayjs";
 import { useQueryClient, useMutation } from "react-query";
 
-import { Comment, CommentDTO } from "models";
-import dayjs from "dayjs";
+import { Comment, CommentDTO, PaginatedResult } from "models";
+import { DEFAULT_PAGINATED_COMMENTS } from "mocks";
 
 interface Props {
   commentDTO: CommentDTO;
@@ -30,38 +31,59 @@ export function usePostCommentMutation() {
     mutationFn: async ({ commentDTO, instance }) =>
       postCommentMutation({ commentDTO, instance }),
     onSuccess: (newComment, { commentDTO: { parentId } }) => {
-      const existingComments = queryClient.getQueryData<Comment[]>("comments");
-      let newComments: Comment[];
+      const existingComments =
+        queryClient.getQueryData<PaginatedResult<Comment>>("comments") ||
+        DEFAULT_PAGINATED_COMMENTS;
+      let updatedComments: PaginatedResult<Comment>;
 
       // First-level comment
       if (!parentId) {
-        newComments = existingComments
-          ? [...existingComments, newComment].sort((comment1, comment2) => {
-              const result = comment2.score - comment1.score;
+        const updatedEdges = [
+          ...existingComments.edges,
+          { cursor: newComment.id, node: newComment },
+        ].sort(({ node: comment1 }, { node: comment2 }) => {
+          const result = comment2.score - comment1.score;
 
-              // If two comments have the same score, sorting by "dateTime" field
-              if (result === 0) {
-                return +dayjs(comment1.dateTime).isAfter(comment2.dateTime);
-              }
+          // If two comments have the same score, sorting by "dateTime" field
+          if (result === 0) {
+            return +dayjs(comment1.dateTime).isAfter(comment2.dateTime);
+          }
 
-              return result;
-            })
-          : [];
+          return result;
+        });
+
+        updatedComments = {
+          ...existingComments,
+          edges: updatedEdges,
+          pageInfo: {
+            ...existingComments.pageInfo,
+            endCursor: updatedEdges[updatedEdges.length - 1].cursor,
+          },
+          totalCount: existingComments.totalCount + 1,
+        };
       } else {
-        newComments =
-          existingComments?.map((existingComment) => {
-            if (existingComment.id === parentId) {
+        updatedComments = {
+          ...existingComments,
+          edges: existingComments.edges.map((edge) => {
+            if (edge.cursor === parentId) {
               return {
-                ...existingComment,
-                replies: [...existingComment.replies, newComment],
+                ...edge,
+                node: {
+                  ...edge.node,
+                  replies: [...edge.node.replies, newComment],
+                },
               };
             }
 
-            return existingComment;
-          }) || [];
+            return edge;
+          }),
+        };
       }
 
-      queryClient.setQueryData<Comment[]>("comments", newComments);
+      queryClient.setQueryData<PaginatedResult<Comment>>(
+        "comments",
+        updatedComments
+      );
     },
   });
 }
