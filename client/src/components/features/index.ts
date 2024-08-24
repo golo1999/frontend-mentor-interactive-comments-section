@@ -1,3 +1,4 @@
+export { ScrollButton } from "./Button";
 export * from "./Card";
 export { CommentsList } from "./List";
 export { DeleteModal } from "./Modal";

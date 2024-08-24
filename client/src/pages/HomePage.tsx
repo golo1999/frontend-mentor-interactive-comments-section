@@ -10,7 +10,12 @@ import {
   usePostCommentMutation,
 } from "api";
 import { Colors } from "colors";
-import { AddCommentCard, CommentsList, DeleteModal } from "components";
+import {
+  AddCommentCard,
+  CommentsList,
+  DeleteModal,
+  ScrollButton,
+} from "components";
 import { useScrollLock } from "hooks";
 import { Comment, PaginatedResult } from "models";
 import {
@@ -119,18 +124,18 @@ export function HomePage() {
     }
   }
 
+  function handleScrollButtonClick() {
+    window.scrollTo({ behavior: "smooth", top: 0 });
+  }
+
   if (fetchCommentsStatus === "loading") {
     return <div>Loading...</div>;
   }
 
+  const isScrollButtonVisible = window.scrollY > window.innerHeight / 2;
+
   return (
     <Container.Main>
-      {comments.length > 0 && (
-        <CommentsList
-          isFetching={isFetching}
-          onEndReached={handleCommentsListEndReached}
-        />
-      )}
       {authenticatedUser && (
         <AddCommentCard
           onButtonClick={(newComment) =>
@@ -138,6 +143,16 @@ export function HomePage() {
           }
         />
       )}
+      {comments.length > 0 && (
+        <CommentsList
+          isFetching={isFetching}
+          onEndReached={handleCommentsListEndReached}
+        />
+      )}
+      <ScrollButton
+        isVisible={isScrollButtonVisible}
+        onClick={handleScrollButtonClick}
+      />
       {isDeleteModalOpen &&
         createPortal(
           <DeleteModal
