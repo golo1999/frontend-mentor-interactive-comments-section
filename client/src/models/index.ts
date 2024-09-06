@@ -1,27 +1,6 @@
-import { OperationType } from "enums";
-import { VoteType } from "types";
-
+export * from "./ApiCall";
 export * from "./Comment";
+export type { Operation } from "./Operation";
 export * from "./PaginatedResult";
-
-export type Operation = {
-  operationType?: OperationType;
-  from?: string;
-  op?: string;
-  path?: string;
-  value?: any;
-};
-
-export type User = {
-  emailAddress: string;
-  id: string;
-  username: string;
-};
-
-export type Vote = {
-  commentId: string;
-  id: string;
-  parentCommentId?: string;
-  type: VoteType;
-  userId: string;
-};
+export * from "./User";
+export type { Vote } from "./Vote";

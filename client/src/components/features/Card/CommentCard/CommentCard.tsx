@@ -1,11 +1,11 @@
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import { AddCommentCard, Card, Photo } from "components";
+import { AddCommentCard, Avatar, Card } from "components";
 import { useDeviceType } from "hooks";
 import { Comment } from "models";
-import { useAuthenticatedUserStore } from "store";
-import type { AddCommentCardType } from "types";
+import { useAuthenticatedUserStore, useSettingsStore } from "store";
+import type { AddCommentCardType, Color } from "types";
 
 import { Container, Icon, Text } from "./CommentCard.style";
 
@@ -24,17 +24,12 @@ export function CommentCard({
   onDownvoteClick,
   onUpvoteClick,
 }: Props) {
-  const {
-    dateTime,
-    parentId,
-    replyToUser,
-    score,
-    text,
-    user: { id: userId, username },
-  } = comment;
+  const { dateTime, parentId, replyToUser, score, text, user } = comment;
+  const { id: userId, username } = user;
 
   const { authenticatedUser } = useAuthenticatedUserStore();
-  const deviceType = useDeviceType();
+  const { isLargeDevice } = useDeviceType();
+  const { theme } = useSettingsStore();
   const [addCommentCardType, setAddCommentCardType] =
     useState<Extract<AddCommentCardType, "REPLY" | "UPDATE">>("REPLY");
   const [isAddCommentCardVisible, setIsAddCommentCardVisible] = useState(false);
@@ -101,10 +96,10 @@ export function CommentCard({
     setIsAddCommentCardVisible((currentValue) => !currentValue);
   }
 
-  const isLargeDevice = useMemo(
-    () => deviceType === "LAPTOP" || deviceType === "DESKTOP",
-    [deviceType]
-  );
+  const avatarBackgroundColor: Color =
+    theme === "DARK" ? "BrightNavyBlue" : "ModerateBlue";
+  const avatarTextColor: Color =
+    theme === "DARK" ? "Platinum" : "VeryLightGray";
 
   if (isLargeDevice) {
     return (
@@ -124,7 +119,11 @@ export function CommentCard({
           <Container.Content>
             <Container.Top>
               <Container.Comment.Details>
-                <Photo />
+                <Avatar
+                  backgroundColor={avatarBackgroundColor}
+                  textColor={avatarTextColor}
+                  user={user}
+                />
                 <Text.Comment.Username>{username}</Text.Comment.Username>
                 {userId === authenticatedUser?.id && (
                   <Container.Me>You</Container.Me>
@@ -180,7 +179,11 @@ export function CommentCard({
     <Container.Main>
       <Card>
         <Container.Top>
-          <Photo />
+          <Avatar
+            backgroundColor={avatarBackgroundColor}
+            textColor={avatarTextColor}
+            user={user}
+          />
           <Container.Username>
             <Text.Comment.Username>{username}</Text.Comment.Username>
             {userId === authenticatedUser?.id && (

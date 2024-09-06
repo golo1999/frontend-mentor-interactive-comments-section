@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type DeviceType =
   | "DESKTOP"
@@ -41,5 +41,28 @@ export function useDeviceType() {
     return () => window.removeEventListener("resize", handleResize);
   }, [handleResize]);
 
-  return deviceType;
+  const isLargeDevice = useMemo(
+    () => deviceType === "LAPTOP" || deviceType === "DESKTOP",
+    [deviceType]
+  );
+  const isMobileDevice = useMemo(
+    () => deviceType === "MOBILE/PORTRAIT" || deviceType === "MOBILE/LANDSCAPE",
+    [deviceType]
+  );
+  const isTabletDevice = useMemo(
+    () => deviceType === "TABLET/PORTRAIT" || deviceType === "TABLET/LANDSCAPE",
+    [deviceType]
+  );
+  const isSmallDevice = useMemo(
+    () => isMobileDevice || isTabletDevice,
+    [isMobileDevice, isTabletDevice]
+  );
+
+  return {
+    deviceType,
+    isLargeDevice,
+    isMobileDevice,
+    isSmallDevice,
+    isTabletDevice,
+  };
 }

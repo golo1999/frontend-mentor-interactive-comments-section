@@ -3,7 +3,8 @@ import { IPublicClientApplication } from "@azure/msal-browser";
 import axios from "axios";
 import { useMutation, useQueryClient } from "react-query";
 
-import { Comment, Operation, PaginatedResult } from "models";
+import { prepareToken } from "api";
+import { ApiCallResult, Comment, Operation, PaginatedResult } from "models";
 import { DEFAULT_PAGINATED_COMMENTS } from "mocks";
 
 interface Props {
@@ -22,12 +23,18 @@ async function patchCommentMutation({
   const url = !parentId
     ? `https://localhost:7105/api/Comment/${id}`
     : `https://localhost:7105/api/Comment/${id}?parentId=${parentId}`;
-  const { data } = await axios.patch<Comment>(url, JSON.stringify(operations), {
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-  });
+  const token = await prepareToken(instance);
+  const { data } = await axios.patch<ApiCallResult<Comment>>(
+    url,
+    JSON.stringify(operations),
+    {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
   return data;
 }
@@ -35,13 +42,18 @@ async function patchCommentMutation({
 export function usePatchCommentMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<Comment, Error, Props>({
+  return useMutation<ApiCallResult<Comment>, Error, Props>({
     mutationFn: async ({ id, instance, operations, parentId }) =>
       patchCommentMutation({ id, instance, operations, parentId }),
-    onSuccess: (patchedComment, { id, parentId }) => {
+    onSuccess: (apiResult, { id, parentId }) => {
+      if (apiResult.error) {
+        return;
+      }
+
       const existingComments =
         queryClient.getQueryData<PaginatedResult<Comment>>("comments") ||
         DEFAULT_PAGINATED_COMMENTS;
+
       let updatedComments: PaginatedResult<Comment>;
 
       // First-level comment
@@ -49,7 +61,7 @@ export function usePatchCommentMutation() {
         updatedComments = {
           ...existingComments,
           edges: existingComments.edges.map((edge) =>
-            edge.cursor === id ? { ...edge, node: patchedComment } : edge
+            edge.cursor === id ? { ...edge, node: apiResult.entity } : edge
           ),
         };
       } else {
@@ -62,7 +74,7 @@ export function usePatchCommentMutation() {
                 node: {
                   ...edge.node,
                   replies: edge.node.replies.map((existingReply) =>
-                    existingReply.id === id ? patchedComment : existingReply
+                    existingReply.id === id ? apiResult.entity : existingReply
                   ),
                 },
               };

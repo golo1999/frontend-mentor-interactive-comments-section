@@ -1,7 +1,6 @@
 import { forwardRef, ReactNode } from "react";
 import styled from "styled-components";
 
-import { Colors } from "colors";
 import { useSettingsStore } from "store";
 
 interface OuterContainerProps {
@@ -10,7 +9,7 @@ interface OuterContainerProps {
 
 const Container = {
   Inner: styled.div`
-    background-color: ${Colors.Neutral.White};
+    background-color: ${({ theme }) => theme.colors.background.modal.inner};
     border-radius: 2.13vw;
     display: flex;
     flex-direction: column;
@@ -42,7 +41,7 @@ const Container = {
   `,
   Outer: styled.div<OuterContainerProps>`
     align-items: center;
-    background-color: rgba(0, 0, 0, 0.75);
+    background-color: ${({ theme }) => theme.colors.background.modal.outer};
     display: flex;
     height: 100vh;
     justify-content: center;

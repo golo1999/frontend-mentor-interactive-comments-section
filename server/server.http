@@ -80,3 +80,13 @@ GET {{server_HostAddress}}/api/vote/6eb34ef1-018f-4c51-87c8-cab340dbdd15?parentC
 GET {{server_HostAddress}}/api/vote/6eb34ef1-018f-4c51-87c8-cab340dbdd15/all?parentCommentId=fca3c54d-941c-42c6-8c2a-42a0f97dcf70
 
 ###
+
+POST {{server_HostAddress}}/api/user
+Content-Type: application/json
+
+{
+  "emailAddress": "me@email.com",
+  "username": "me"
+}
+
+###

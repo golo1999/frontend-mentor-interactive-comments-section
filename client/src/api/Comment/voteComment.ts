@@ -3,58 +3,63 @@ import { IPublicClientApplication } from "@azure/msal-browser";
 import axios from "axios";
 import { useQueryClient, useMutation } from "react-query";
 
-import { Comment, PaginatedResult } from "models";
+import { prepareToken } from "api";
+import { ApiCallResult, Comment, PaginatedResult } from "models";
 import { DEFAULT_PAGINATED_COMMENTS } from "mocks";
-
-interface DeleteCommentContext {
-  comments?: Comment[];
-}
+import { VoteType } from "types";
 
 interface Props {
   id: string;
   instance: IPublicClientApplication;
   parentId?: string;
+  voteType: VoteType;
 }
 
-async function deleteCommentMutation({ id, instance, parentId }: Props) {
+async function voteCommentMutation({
+  id,
+  instance,
+  parentId,
+  voteType,
+}: Props) {
   const url = !parentId
-    ? `https://localhost:7105/api/Comment/${id}`
-    : `https://localhost:7105/api/Comment/${id}?parentId=${parentId}`;
-  const { data } = await axios.delete<Comment>(url, {
+    ? `https://localhost:7105/api/Comment/${id}/vote?voteType=${voteType}`
+    : `https://localhost:7105/api/Comment/${id}/vote?voteType=${voteType}&parentId=${parentId}`;
+  const token = await prepareToken(instance);
+  const { data } = await axios.patch<ApiCallResult<Comment>>(url, null, {
     headers: {
       Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
 
   return data;
 }
 
-export function useDeleteCommentMutation() {
+export function useVoteCommentMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<Comment, Error, Props, DeleteCommentContext>({
-    mutationFn: async ({ id, instance, parentId }) =>
-      deleteCommentMutation({ id, instance, parentId }),
-    onSuccess: (deletedComment, { id, parentId }) => {
+  return useMutation<ApiCallResult<Comment>, Error, Props>({
+    mutationFn: async ({ id, instance, parentId, voteType }) =>
+      voteCommentMutation({ id, instance, parentId, voteType }),
+    onSuccess: (apiResult, { id, parentId }) => {
+      if (apiResult.error) {
+        return;
+      }
+
       const existingComments =
         queryClient.getQueryData<PaginatedResult<Comment>>("comments") ||
         DEFAULT_PAGINATED_COMMENTS;
+
       let updatedComments: PaginatedResult<Comment>;
 
       // First-level comment
       if (!parentId) {
-        const updatedEdges = existingComments.edges.filter(
-          ({ cursor }) => cursor !== id
-        );
-
         updatedComments = {
           ...existingComments,
-          edges: updatedEdges,
-          pageInfo: {
-            ...existingComments.pageInfo,
-            endCursor: updatedEdges[updatedEdges.length - 1].cursor,
-          },
-          totalCount: existingComments.totalCount - 1,
+          edges: existingComments.edges.map((edge) =>
+            edge.cursor === id ? { ...edge, node: apiResult.entity } : edge
+          ),
         };
       } else {
         updatedComments = {
@@ -65,8 +70,8 @@ export function useDeleteCommentMutation() {
                 ...edge,
                 node: {
                   ...edge.node,
-                  replies: edge.node.replies.filter(
-                    (existingReply) => existingReply.id !== id
+                  replies: edge.node.replies.map((existingReply) =>
+                    existingReply.id === id ? apiResult.entity : existingReply
                   ),
                 },
               };

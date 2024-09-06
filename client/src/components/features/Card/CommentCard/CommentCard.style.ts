@@ -1,8 +1,6 @@
 import { FaMinus, FaPencil, FaPlus, FaReply, FaTrash } from "react-icons/fa6";
 import styled, { css } from "styled-components";
 
-import { Colors } from "colors";
-
 export const Container = {
   Actions: styled.div`
     align-items: center;
@@ -73,9 +71,9 @@ export const Container = {
     }
   `,
   Me: styled.div`
-    background-color: ${Colors.Primary.ModerateBlue};
+    background-color: ${({ theme }) => theme.colors.background.me};
     border-radius: 0.53vw;
-    color: ${Colors.Neutral.LightGray};
+    color: ${({ theme }) => theme.colors.text.me};
     font-size: 3.46vw;
     font-weight: 600;
     padding: 0.8vw 1.6vw;
@@ -98,7 +96,7 @@ export const Container = {
   `,
   Score: styled.div`
     align-items: center;
-    background-color: ${Colors.Neutral.LightGray};
+    background-color: ${({ theme }) => theme.colors.background.quaternary};
     border-radius: 2.13vw;
     display: flex;
     gap: 3.2vw;
@@ -123,7 +121,8 @@ export const Container = {
   Top: styled.div`
     align-items: center;
     display: flex;
-    gap: 4.26vw;
+    flex-wrap: wrap;
+    gap: 2.13vw 4.26vw;
 
     @media screen {
       @media (min-width: 768px) {
@@ -139,6 +138,7 @@ export const Container = {
   Username: styled.div`
     align-items: center;
     display: flex;
+    flex-wrap: wrap;
     gap: 2.13vw;
 
     @media screen {
@@ -185,13 +185,14 @@ export const Icon = {
     }
   `,
   Minus: styled(FaMinus)<ScoreIconProps>`
-    color: ${Colors.Primary.LightGrayishBlue};
+    color: ${({ theme }) => theme.colors.icon.secondary.default};
     ${({ $isDisabled }) => !$isDisabled && "cursor: pointer;"};
     font-size: 3.2vw;
+    transition: color 0.3s ease;
 
     &:hover {
-      ${({ $isDisabled }) =>
-        !$isDisabled && `color: ${Colors.Primary.ModerateBlue};`};
+      ${({ $isDisabled, theme }) =>
+        !$isDisabled && `color: ${theme.colors.icon.secondary.hover};`};
     }
 
     @media screen {
@@ -205,13 +206,14 @@ export const Icon = {
     }
   `,
   Plus: styled(FaPlus)<ScoreIconProps>`
-    color: ${Colors.Primary.LightGrayishBlue};
+    color: ${({ theme }) => theme.colors.icon.secondary.default};
     ${({ $isDisabled }) => !$isDisabled && "cursor: pointer;"};
     font-size: 3.2vw;
+    transition: color 0.3s ease;
 
     &:hover {
-      ${({ $isDisabled }) =>
-        !$isDisabled && `color: ${Colors.Primary.ModerateBlue};`};
+      ${({ $isDisabled, theme }) =>
+        !$isDisabled && `color: ${theme.colors.icon.secondary.hover};`};
     }
 
     @media screen {
@@ -265,32 +267,32 @@ export const Text = {
   Action: {
     Delete: styled.p`
       ${sharedActionTextStyle}
-      color: ${Colors.Primary.SoftRed};
+      color: ${({ theme }) => theme.colors.text.action.delete.default};
 
       &:hover {
-        color: ${Colors.Primary.PaleRed};
+        color: ${({ theme }) => theme.colors.text.action.delete.hover};
       }
     `,
     Edit: styled.p`
       ${sharedActionTextStyle}
-      color: ${Colors.Primary.ModerateBlue};
+      color: ${({ theme }) => theme.colors.text.action.edit.default};
 
       &:hover {
-        color: ${Colors.Primary.LightGrayishBlue};
+        color: ${({ theme }) => theme.colors.text.action.edit.hover};
       }
     `,
     Reply: styled.p`
       ${sharedActionTextStyle}
-      color: ${Colors.Primary.ModerateBlue};
+      color: ${({ theme }) => theme.colors.text.action.reply.default};
 
       &:hover {
-        color: ${Colors.Primary.LightGrayishBlue};
+        color: ${({ theme }) => theme.colors.text.action.reply.hover};
       }
     `,
   },
   Comment: {
     DateTimeDifference: styled.p`
-      color: ${Colors.Neutral.GrayishBlue};
+      color: ${({ theme }) => theme.colors.text.comment.dateTime};
       font-size: 3.73vw;
 
       @media screen {
@@ -304,11 +306,11 @@ export const Text = {
       }
     `,
     ReplyToUser: styled.span`
-      color: ${Colors.Primary.ModerateBlue};
+      color: ${({ theme }) => theme.colors.text.comment.replyToUser};
       font-weight: 600;
     `,
     Score: styled.p`
-      color: ${Colors.Primary.ModerateBlue};
+      color: ${({ theme }) => theme.colors.text.comment.score};
       font-size: 4.26vw;
       font-weight: 700;
 
@@ -323,7 +325,7 @@ export const Text = {
       }
     `,
     Text: styled.p`
-      color: ${Colors.Neutral.GrayishBlue};
+      color: ${({ theme }) => theme.colors.text.comment.text};
       font-size: 4.26vw;
 
       @media screen {
@@ -337,7 +339,7 @@ export const Text = {
       }
     `,
     Username: styled.p`
-      color: ${Colors.Neutral.DarkBlue};
+      color: ${({ theme }) => theme.colors.text.comment.username};
       font-size: 4vw;
       font-weight: 700;
 

@@ -9,6 +9,7 @@ namespace server.API
         public AutoMapperProfile()
         {
             CreateMap<CommentDTO, Comment>();
+            CreateMap<UserDTO, User>();
             CreateMap<VoteDTO, Vote>();
         }
     }

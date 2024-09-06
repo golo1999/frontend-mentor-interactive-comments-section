@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.JsonPatch;
 using server.Models.Entities;
+using server.Models.Entities.ApiCall;
+using server.Models.Entities.PaginatedResult;
 using server.Models.Enums;
 using server.Services.Repository;
 
@@ -11,27 +13,60 @@ namespace server.Services.Service
         private readonly IUserService _userService = userService;
         private readonly Lazy<IVoteService> _voteService = voteService;
 
-        public async Task<Comment> Create(Comment comment)
+        public async Task<ApiCallResult<Comment>> Create(Guid userId, Comment comment)
         {
             if (comment.ReplyToUserId is not null && await _userService.GetById((Guid)comment.ReplyToUserId) is null)
             {
-                throw new Exception("The replyTo user does not exist.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The replyTo user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _userService.GetById(comment.UserId) is null)
             {
-                throw new Exception("The user does not exist.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
-
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
 
             if (comment.ParentId is not null)
             {
-                _ = await _commentRepository.GetByIdAsync((Guid)comment.ParentId) ?? throw new Exception("The parent comment does not exist.");
-
-                if (comment.ReplyToUserId.Equals(currentUser.Id))
+                if (await _commentRepository.GetByIdAsync((Guid)comment.ParentId) is null)
                 {
-                    throw new Exception("You cannot reply to yourself.");
+                    return new ApiCallResult<Comment>()
+                    {
+                        Entity = null,
+                        Error = new()
+                        {
+                            Message = "The parent comment does not exist.",
+                            Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                        }
+                    };
+                }
+
+                if (comment.ReplyToUserId.Equals(userId))
+                {
+                    return new ApiCallResult<Comment>()
+                    {
+                        Entity = null,
+                        Error = new()
+                        {
+                            Message = "You cannot reply to yourself.",
+                            Type = ApiCallErrorType.NOT_ALLOWED
+                        }
+                    };
                 }
             }
 
@@ -40,33 +75,115 @@ namespace server.Services.Service
 
             if (await _commentRepository.GetByIdAsync(comment.Id, comment.ParentId) is not null)
             {
-                throw new Exception("A comment with the same id already exists.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "A comment with the same id already exists.",
+                        Type = ApiCallErrorType.ENTITY_ALREADY_EXISTS
+                    }
+                };
             }
 
-            return await _commentRepository.CreateAsync(comment) ?? throw new Exception("The comment could not be created.");
+            var createdComment = await _commentRepository.CreateAsync(comment);
+
+            if (createdComment is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment could not be created.",
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_CREATED
+                    }
+                };
+            }
+
+            return new ApiCallResult<Comment>()
+            {
+                Entity = createdComment,
+                Error = null
+            };
         }
 
-        public async Task<Comment> Delete(Guid userId, Guid id, Guid? parentId)
+        public async Task<ApiCallResult<Comment>> Delete(Guid userId, Guid id, Guid? parentId)
         {
-            var comment = await _commentRepository.GetByIdAsync(id, parentId) ?? throw new Exception("The comment does not exist.");
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
+            var comment = await _commentRepository.GetByIdAsync(id, parentId);
 
-            if (!comment.UserId.Equals(currentUser?.Id))
+            if (comment is null)
             {
-                throw new Exception("You cannot delete other user's vote.");
-            }
-
-            if (parentId is not null && await _commentRepository.GetByIdAsync((Guid)parentId) is null)
-            {
-                throw new Exception("The parent comment does not exist.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _userService.GetById(userId) is null)
             {
-                throw new Exception("The user does not exist.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            return await _commentRepository.DeleteAsync(userId, id, parentId) ?? throw new Exception("The comment could not be deleted.");
+            if (!comment.UserId.Equals(userId))
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "You cannot delete other user's vote.",
+                        Type = ApiCallErrorType.NOT_ALLOWED
+                    }
+                };
+            }
+
+            if (parentId is not null && await _commentRepository.GetByIdAsync((Guid)parentId) is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parent comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
+            }
+
+            var deletedComment = await _commentRepository.DeleteAsync(id, parentId);
+
+            if (deletedComment is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment could not be deleted.",
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_DELETED
+                    }
+                };
+            }
+
+            return new ApiCallResult<Comment>()
+            {
+                Entity = deletedComment,
+                Error = null
+            };
         }
 
         public async Task<IEnumerable<Comment>> GetAll()
@@ -79,39 +196,145 @@ namespace server.Services.Service
             return await _commentRepository.GetAllAsync(first, after);
         }
 
-        public async Task<Comment> GetById(Guid id, Guid? parentId = null)
+        public async Task<ApiCallResult<Comment>> GetById(Guid id, Guid? parentId = null)
         {
-            return await _commentRepository.GetByIdAsync(id, parentId) ?? throw new Exception("The comment does not exist.");
+            var comment = await _commentRepository.GetByIdAsync(id, parentId);
+
+            if (comment is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
+            }
+
+            return new ApiCallResult<Comment>
+            {
+                Entity = comment,
+                Error = null
+            };
         }
 
-        public async Task<Comment> Patch(Guid id, JsonPatchDocument<Comment> patch, Guid? parentId = null)
+        public async Task<ApiCallResult<Comment>> Patch(Guid id, JsonPatchDocument<Comment> patch, Guid? parentId = null)
         {
-            return await _commentRepository.PatchAsync(id, patch, parentId) ?? throw new Exception("The comment could not be patched.");
+            if (await _commentRepository.GetByIdAsync(id, parentId) is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
+            }
+
+            var patchedComment = await _commentRepository.PatchAsync(id, patch, parentId);
+
+            if (patchedComment is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment could not be patched.",
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_PATCHED
+                    }
+                };
+            }
+
+            return new ApiCallResult<Comment>()
+            {
+                Entity = patchedComment,
+                Error = null
+            };
         }
 
-        public async Task<Comment> Vote(VoteType voteType, Guid userId, Guid id, Guid? parentId = null)
+        public async Task<ApiCallResult<Comment>> Vote(VoteType voteType, Guid userId, Guid id, Guid? parentId = null)
         {
             if (parentId is not null && await _commentRepository.GetByIdAsync((Guid)parentId) is null)
             {
-                throw new Exception("The parent comment does not exist.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parent comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _userService.GetById(userId) is null)
             {
-                throw new Exception("The user does not exist.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            var comment = await _commentRepository.GetByIdAsync(id, parentId) ?? throw new Exception("The comment does not exist.");
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
+            var comment = await _commentRepository.GetByIdAsync(id, parentId);
 
-            if (comment.UserId.Equals(currentUser.Id))
+            if (comment is null)
             {
-                throw new Exception("You cannot upvote your own comment.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            var exceptionMessage = voteType == VoteType.DOWN ? "The comment could not be downvoted." : "The comment could not be upvoted.";
+            if (comment.UserId.Equals(userId))
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "You cannot upvote your own comment.",
+                        Type = ApiCallErrorType.NOT_ALLOWED
+                    }
+                };
+            }
 
-            return await _voteService.Value.VoteByCommentId(voteType, userId, id, parentId) ?? throw new Exception(exceptionMessage);
+            var votedComment = await _voteService.Value.VoteByCommentId(voteType, userId, id, parentId);
+
+            if (votedComment.Entity is null)
+            {
+                var errorMessage = voteType == VoteType.DOWN ? "The comment could not be downvoted." : "The comment could not be upvoted.";
+
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = errorMessage,
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_PATCHED
+                    }
+                };
+            }
+
+            return new ApiCallResult<Comment>()
+            {
+                Entity = votedComment.Entity,
+                Error = null
+            };
         }
     }
 }

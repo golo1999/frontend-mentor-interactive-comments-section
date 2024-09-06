@@ -1,22 +1,31 @@
 import { IPublicClientApplication } from "@azure/msal-browser";
 
 import axios from "axios";
-import dayjs from "dayjs";
 import { useQueryClient, useMutation } from "react-query";
 
-import { Comment, CommentDTO, PaginatedResult } from "models";
+import { prepareToken } from "api";
+import { ApiCallResult, Comment, PaginatedResult } from "models";
 import { DEFAULT_PAGINATED_COMMENTS } from "mocks";
 
-interface Props {
-  commentDTO: CommentDTO;
-  instance: IPublicClientApplication;
+interface DeleteCommentContext {
+  comments?: Comment[];
 }
 
-async function postCommentMutation({ commentDTO, instance }: Props) {
-  const url = "https://localhost:7105/api/Comment";
-  const { data } = await axios.post<Comment>(url, JSON.stringify(commentDTO), {
+interface Props {
+  id: string;
+  instance: IPublicClientApplication;
+  parentId?: string;
+}
+
+async function deleteCommentMutation({ id, instance, parentId }: Props) {
+  const url = !parentId
+    ? `https://localhost:7105/api/Comment/${id}`
+    : `https://localhost:7105/api/Comment/${id}?parentId=${parentId}`;
+  const token = await prepareToken(instance);
+  const { data } = await axios.delete<ApiCallResult<Comment>>(url, {
     headers: {
       Accept: "application/json",
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
   });
@@ -24,33 +33,33 @@ async function postCommentMutation({ commentDTO, instance }: Props) {
   return data;
 }
 
-export function usePostCommentMutation() {
+export function useDeleteCommentMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<Comment, Error, Props>({
-    mutationFn: async ({ commentDTO, instance }) =>
-      postCommentMutation({ commentDTO, instance }),
-    onSuccess: (newComment, { commentDTO: { parentId } }) => {
+  return useMutation<
+    ApiCallResult<Comment>,
+    Error,
+    Props,
+    DeleteCommentContext
+  >({
+    mutationFn: async ({ id, instance, parentId }) =>
+      deleteCommentMutation({ id, instance, parentId }),
+    onSuccess: (apiResult, { id, parentId }) => {
+      if (apiResult.error) {
+        return;
+      }
+
       const existingComments =
         queryClient.getQueryData<PaginatedResult<Comment>>("comments") ||
         DEFAULT_PAGINATED_COMMENTS;
+
       let updatedComments: PaginatedResult<Comment>;
 
       // First-level comment
       if (!parentId) {
-        const updatedEdges = [
-          ...existingComments.edges,
-          { cursor: newComment.id, node: newComment },
-        ].sort(({ node: comment1 }, { node: comment2 }) => {
-          const result = comment2.score - comment1.score;
-
-          // If two comments have the same score, sorting by "dateTime" field
-          if (result === 0) {
-            return +dayjs(comment1.dateTime).isAfter(comment2.dateTime);
-          }
-
-          return result;
-        });
+        const updatedEdges = existingComments.edges.filter(
+          ({ cursor }) => cursor !== id
+        );
 
         updatedComments = {
           ...existingComments,
@@ -59,7 +68,7 @@ export function usePostCommentMutation() {
             ...existingComments.pageInfo,
             endCursor: updatedEdges[updatedEdges.length - 1].cursor,
           },
-          totalCount: existingComments.totalCount + 1,
+          totalCount: existingComments.totalCount - 1,
         };
       } else {
         updatedComments = {
@@ -70,7 +79,9 @@ export function usePostCommentMutation() {
                 ...edge,
                 node: {
                   ...edge.node,
-                  replies: [...edge.node.replies, newComment],
+                  replies: edge.node.replies.filter(
+                    (existingReply) => existingReply.id !== id
+                  ),
                 },
               };
             }

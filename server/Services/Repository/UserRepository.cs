@@ -8,6 +8,14 @@ namespace server.Services.Repository
     {
         private readonly DatabaseContext _context = context;
 
+        public async Task<User> CreateAsync(User user)
+        {
+            var createdUser = await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
+
+            return createdUser.Entity;
+        }
+
         public async Task<User?> GetByEmailAddressAsync(string emailAddress)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.EmailAddress.Equals(emailAddress));

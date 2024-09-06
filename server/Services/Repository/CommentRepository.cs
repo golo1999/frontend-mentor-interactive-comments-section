@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using server.Models.Contexts;
 using server.Models.Entities;
+using server.Models.Entities.PaginatedResult;
 
 namespace server.Services.Repository
 {
@@ -17,7 +18,7 @@ namespace server.Services.Repository
             return createdComment.Entity;
         }
 
-        public async Task<Comment?> DeleteAsync(Guid userId, Guid id, Guid? parentId = null)
+        public async Task<Comment?> DeleteAsync(Guid id, Guid? parentId = null)
         {
             var comment = await GetByIdAsync(id, parentId);
 

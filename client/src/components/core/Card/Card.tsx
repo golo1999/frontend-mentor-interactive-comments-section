@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import styled from "styled-components";
 
-import { Colors } from "colors";
 import { FlexAlignItems } from "types";
 
 interface MainContainerProps {
@@ -12,7 +11,7 @@ interface MainContainerProps {
 const Container = {
   Main: styled.div<MainContainerProps>`
     ${({ $alignItems }) => $alignItems && `align-items: ${$alignItems};`};
-    background-color: ${Colors.Neutral.White};
+    background-color: ${({ theme }) => theme.colors.background.secondary};
     border-radius: 2.13vw;
     display: flex;
     ${({ $horizontal }) => !$horizontal && "flex-direction: column;"};

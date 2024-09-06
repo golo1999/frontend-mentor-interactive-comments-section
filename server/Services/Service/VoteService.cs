@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.JsonPatch;
 using server.Models.Entities;
+using server.Models.Entities.ApiCall;
 using server.Models.Enums;
 using server.Services.Repository;
 
@@ -11,142 +12,428 @@ namespace server.Services.Service
         private readonly IUserService _userService = userService;
         private readonly IVoteRepository _voteRepository = voteRepository;
 
-        public async Task<Vote> Create(Vote vote)
+        public async Task<ApiCallResult<Vote>> Create(Guid userId, Vote vote)
         {
             if (await _userService.GetById(vote.UserId) is null)
             {
-                throw new Exception("The user does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (vote.ParentCommentId is not null && await _commentService.Value.GetById((Guid)vote.ParentCommentId) is null)
             {
-                throw new Exception("The parent comment does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parent comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            var comment = await _commentService.Value.GetById(vote.CommentId, vote.ParentCommentId) ?? throw new Exception("The comment does not exist.");
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
+            var comment = await _commentService.Value.GetById(vote.CommentId, vote.ParentCommentId);
 
-            if (comment.UserId.Equals(currentUser.Id))
+            if (comment.Entity is null)
             {
-                throw new Exception("You cannot vote your own comment.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
+            }
+
+            if (comment.Entity.UserId.Equals(userId))
+            {
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "You cannot vote your own comment.",
+                        Type = ApiCallErrorType.NOT_ALLOWED
+                    }
+                };
             }
 
             vote.Id = Guid.NewGuid();
 
             if (await _voteRepository.GetByIdAsync(vote.Id) is not null)
             {
-                throw new Exception("A vote with the same Id already exists.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "A vote with the same Id already exists.",
+                        Type = ApiCallErrorType.ENTITY_ALREADY_EXISTS
+                    }
+                };
             }
 
-            return await _voteRepository.CreateAsync(vote) ?? throw new Exception("The vote could not be created.");
+            var createdVote = await _voteRepository.CreateAsync(vote);
+
+            if (createdVote is null)
+            {
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The vote could not be created.",
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_CREATED
+                    }
+                };
+            }
+
+            return new ApiCallResult<Vote>()
+            {
+                Entity = createdVote,
+                Error = null
+            };
         }
 
-        public async Task<Vote> DeleteByCommentId(Guid userId, Guid commentId, Guid? parentCommentId = null)
+        public async Task<ApiCallResult<Vote>> DeleteByCommentId(Guid userId, Guid commentId, Guid? parentCommentId = null)
         {
             if (await _userService.GetById(userId) is null)
             {
-                throw new Exception("The user does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
             {
-                throw new Exception("The parent comment does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parent comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _commentService.Value.GetById(commentId, parentCommentId) is null)
             {
-                throw new Exception("The comment does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
             var vote = await GetByCommentId(userId, commentId, parentCommentId);
 
-            if (!vote.UserId.Equals(currentUser.Id))
+            if (vote.Entity is null)
             {
-                throw new Exception("You cannot delete other user's comment.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The vote does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            return await _voteRepository.DeleteByCommentIdAsync(userId, commentId, parentCommentId) ?? throw new Exception("The vote could not be deleted.");
+            if (!vote.Entity.UserId.Equals(userId))
+            {
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "You cannot delete other user's comment.",
+                        Type = ApiCallErrorType.NOT_ALLOWED
+                    }
+                };
+            }
+
+            var deletedVote = await _voteRepository.DeleteByCommentIdAsync(userId, commentId, parentCommentId);
+
+            if (deletedVote is null)
+            {
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The vote could not be deleted.",
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_DELETED
+                    }
+                };
+            }
+
+            return new ApiCallResult<Vote>()
+            {
+                Entity = deletedVote,
+                Error = null
+            };
         }
 
-        public async Task<IEnumerable<Vote>> GetAllByCommentId(Guid commentId, Guid? parentCommentId = null)
+        public async Task<ApiCallResult<IEnumerable<Vote>>> GetAllByCommentId(Guid commentId, Guid? parentCommentId = null)
         {
             if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
             {
-                throw new Exception("The parent comment does not exist.");
+                return new ApiCallResult<IEnumerable<Vote>>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parent comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _commentService.Value.GetById(commentId, parentCommentId) is null)
             {
-                throw new Exception("The comment does not exist.");
+                return new ApiCallResult<IEnumerable<Vote>>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            return await _voteRepository.GetAllByCommentIdAsync(commentId, parentCommentId);
+            var votes = await _voteRepository.GetAllByCommentIdAsync(commentId, parentCommentId);
+
+            return new ApiCallResult<IEnumerable<Vote>>()
+            {
+                Entity = votes,
+                Error = null
+            };
         }
 
-        public async Task<Vote> GetByCommentId(Guid userId, Guid commentId, Guid? parentCommentId = null)
+        public async Task<ApiCallResult<Vote>> GetByCommentId(Guid userId, Guid commentId, Guid? parentCommentId = null)
         {
             if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
             {
-                throw new Exception("The parent comment does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parent comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _commentService.Value.GetById(commentId, parentCommentId) is null)
             {
-                throw new Exception("The comment does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _userService.GetById(userId) is null)
             {
-                throw new Exception("The user does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            return await _voteRepository.GetByCommentIdAsync(userId, commentId, parentCommentId) ?? throw new Exception("The vote does not exist.");
+            var vote = await _voteRepository.GetByCommentIdAsync(userId, commentId, parentCommentId);
+
+            if (vote is null)
+            {
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The vote does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
+            }
+
+            return new ApiCallResult<Vote>()
+            {
+                Entity = vote,
+                Error = null
+            };
         }
 
-        public async Task<Vote> PatchByCommentId(Guid userId, Guid commentId, JsonPatchDocument<Vote> patch, Guid? parentCommentId = null)
+        public async Task<ApiCallResult<Vote>> PatchByCommentId(Guid userId, Guid commentId, JsonPatchDocument<Vote> patch, Guid? parentCommentId = null)
         {
             if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
             {
-                throw new Exception("The parent comment does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parent comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _commentService.Value.GetById(commentId, parentCommentId) is null)
             {
-                throw new Exception("The comment does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (await _userService.GetById(userId) is null)
             {
-                throw new Exception("The user does not exist.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
+            var vote = await GetByCommentId(userId, commentId, parentCommentId);
 
-            if (!userId.Equals(currentUser?.Id))
+            if (vote.Entity is null)
             {
-                throw new Exception("You cannot patch other user's vote.");
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The vote does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            return await _voteRepository.PatchByCommentIdAsync(userId, commentId, patch, parentCommentId) ?? throw new Exception("The vote could not be patched.");
+            if (!vote.Entity.UserId.Equals(userId))
+            {
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "You cannot patch other user's vote.",
+                        Type = ApiCallErrorType.NOT_ALLOWED
+                    }
+                };
+            }
+
+            var patchedVote = await _voteRepository.PatchByCommentIdAsync(userId, commentId, patch, parentCommentId);
+
+            if (patchedVote is null)
+            {
+                return new ApiCallResult<Vote>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The vote could not be patched.",
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_PATCHED
+                    }
+                };
+            }
+
+            return new ApiCallResult<Vote>()
+            {
+                Entity = patchedVote,
+                Error = null
+            };
         }
 
-        public async Task<Comment> VoteByCommentId(VoteType voteType, Guid userId, Guid commentId, Guid? parentCommentId = null)
+        public async Task<ApiCallResult<Comment>> VoteByCommentId(VoteType voteType, Guid userId, Guid commentId, Guid? parentCommentId = null)
         {
             if (await _userService.GetById(userId) is null)
             {
-                throw new Exception("The user does not exist.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
             if (parentCommentId is not null && await _commentService.Value.GetById((Guid)parentCommentId) is null)
             {
-                throw new Exception("The parent comment does not exist.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parent comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            var comment = await _commentService.Value.GetById(commentId, parentCommentId) ?? throw new Exception("The comment does not exist.");
+            var comment = await _commentService.Value.GetById(commentId, parentCommentId);
+
+            if (comment.Entity is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
+            }
+
             var patchDocument = new JsonPatchDocument<Comment>();
             var score = 0;
             var userVote = await _voteRepository.GetByCommentIdAsync(userId, commentId, parentCommentId);
+            ApiCallResult<Comment> patchedComment;
 
             if (userVote is null)
             {
@@ -161,11 +448,31 @@ namespace server.Services.Service
 
                 if (await _voteRepository.GetByIdAsync(newVote.Id, newVote.ParentCommentId) is not null)
                 {
-                    throw new Exception("A vote with the same Id already exists.");
+                    return new ApiCallResult<Comment>()
+                    {
+                        Entity = null,
+                        Error = new()
+                        {
+                            Message = "A vote with the same Id already exists.",
+                            Type = ApiCallErrorType.ENTITY_ALREADY_EXISTS
+                        }
+                    };
                 }
 
-                _ = await _voteRepository.CreateAsync(newVote) ?? throw new Exception("The vote could not be created.");
-                score = comment.Votes.Aggregate(score, (currentScore, vote) => vote.Type switch
+                if (await _voteRepository.CreateAsync(newVote) is null)
+                {
+                    return new ApiCallResult<Comment>()
+                    {
+                        Entity = null,
+                        Error = new()
+                        {
+                            Message = "The vote could not be created.",
+                            Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_CREATED
+                        }
+                    };
+                }
+
+                score = comment.Entity.Votes.Aggregate(score, (currentScore, vote) => vote.Type switch
                 {
                     VoteType.DOWN => currentScore - 1,
                     VoteType.UP => currentScore + 1,
@@ -173,7 +480,26 @@ namespace server.Services.Service
                 });
                 patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = score });
 
-                return await _commentService.Value.Patch(commentId, patchDocument, parentCommentId) ?? throw new Exception("The comment could not be created.");
+                patchedComment = await _commentService.Value.Patch(commentId, patchDocument, parentCommentId);
+
+                if (patchedComment.Entity is null)
+                {
+                    return new ApiCallResult<Comment>()
+                    {
+                        Entity = null,
+                        Error = new()
+                        {
+                            Message = "The comment could not be patched.",
+                            Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_PATCHED
+                        }
+                    };
+                }
+
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = patchedComment.Entity,
+                    Error = null
+                };
             }
 
             if (userVote.Type != voteType)
@@ -181,14 +507,33 @@ namespace server.Services.Service
                 var votePatchDocument = new JsonPatchDocument<Vote>();
                 votePatchDocument.Operations.Add(new() { op = "replace", path = "/type", value = voteType });
 
-                _ = await _voteRepository.PatchByCommentIdAsync(userId, commentId, votePatchDocument, parentCommentId) ?? throw new Exception("The vote could not be patched.");
+                if (await _voteRepository.PatchByCommentIdAsync(userId, commentId, votePatchDocument, parentCommentId) is null)
+                {
+                    return new ApiCallResult<Comment>()
+                    {
+                        Entity = null,
+                        Error = new()
+                        {
+                            Message = "The vote could not be patched.",
+                            Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_PATCHED
+                        }
+                    };
+                }
             }
-            else
+            else if (await _voteRepository.DeleteByCommentIdAsync(userId, commentId, parentCommentId) is null)
             {
-                _ = await _voteRepository.DeleteByCommentIdAsync(userId, commentId, parentCommentId) ?? throw new Exception("The vote could not be deleted.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The vote could not be deleted.",
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_DELETED
+                    }
+                };
             }
 
-            score = comment.Votes.Aggregate(score, (currentScore, vote) => vote.Type switch
+            score = comment.Entity.Votes.Aggregate(score, (currentScore, vote) => vote.Type switch
             {
                 VoteType.DOWN => currentScore - 1,
                 VoteType.UP => currentScore + 1,
@@ -196,7 +541,26 @@ namespace server.Services.Service
             });
             patchDocument.Operations.Add(new() { op = "replace", path = "/score", value = score });
 
-            return await _commentService.Value.Patch(commentId, patchDocument, parentCommentId) ?? throw new Exception("The comment could not be patched.");
+            patchedComment = await _commentService.Value.Patch(commentId, patchDocument, parentCommentId);
+
+            if (patchedComment.Entity is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The comment could not be patched.",
+                        Type = ApiCallErrorType.ENTITY_COULD_NOT_BE_PATCHED
+                    }
+                };
+            }
+
+            return new ApiCallResult<Comment>()
+            {
+                Entity = patchedComment.Entity,
+                Error = null
+            };
         }
     }
 }

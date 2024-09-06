@@ -1,18 +1,17 @@
 import { IoIosArrowUp } from "react-icons/io";
 import styled from "styled-components";
 
-import { Colors } from "colors";
-
 interface ButtonProps {
   $isVisible: boolean;
 }
 
 const Button = styled.button.attrs({ type: "button" })<ButtonProps>`
   align-items: center;
-  background-color: ${Colors.Neutral.DarkBlue};
+  background-color: ${({ theme }) =>
+    theme.colors.background.scrollButton.default};
   border-radius: 50%;
   bottom: 4.26vw;
-  color: ${Colors.Neutral.White};
+  color: ${({ theme }) => theme.colors.text.scrollButton.default};
   display: flex;
   justify-content: center;
   opacity: ${({ $isVisible }) => ($isVisible ? 1 : 0)};
@@ -23,8 +22,9 @@ const Button = styled.button.attrs({ type: "button" })<ButtonProps>`
   width: fit-content;
 
   &:hover {
-    background-color: ${Colors.Neutral.GrayishBlue};
-    color: ${Colors.Neutral.VeryLightGray};
+    background-color: ${({ theme }) =>
+      theme.colors.background.scrollButton.hover};
+    color: ${({ theme }) => theme.colors.text.scrollButton.hover};
   }
 
   @media screen {
@@ -42,22 +42,24 @@ const Button = styled.button.attrs({ type: "button" })<ButtonProps>`
   }
 `;
 
-const Icon = styled(IoIosArrowUp)`
-  height: 4.8vw;
-  width: 4.8vw;
+const Icon = {
+  ArrowUp: styled(IoIosArrowUp)`
+    height: 4.8vw;
+    width: 4.8vw;
 
-  @media screen {
-    @media (min-width: 768px) {
-      height: 2.34375vw;
-      width: 2.34375vw;
-    }
+    @media screen {
+      @media (min-width: 768px) {
+        height: 2.34375vw;
+        width: 2.34375vw;
+      }
 
-    @media (min-width: 1200px) {
-      height: 1.66vw;
-      width: 1.66vw;
+      @media (min-width: 1200px) {
+        height: 1.66vw;
+        width: 1.66vw;
+      }
     }
-  }
-`;
+  `,
+};
 
 interface Props {
   isVisible: boolean;
@@ -67,7 +69,7 @@ interface Props {
 export function ScrollButton({ isVisible, onClick }: Props) {
   return (
     <Button $isVisible={isVisible} onClick={isVisible ? onClick : undefined}>
-      <Icon />
+      <Icon.ArrowUp />
     </Button>
   );
 }

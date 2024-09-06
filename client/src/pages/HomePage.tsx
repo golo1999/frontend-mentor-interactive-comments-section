@@ -1,6 +1,7 @@
 import { useMsal } from "@azure/msal-react";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "react-query";
 import styled from "styled-components";
 
@@ -9,25 +10,25 @@ import {
   useGetCommentsQuery,
   usePostCommentMutation,
 } from "api";
-import { Colors } from "colors";
 import {
   AddCommentCard,
   CommentsList,
   DeleteModal,
+  Navbar,
   ScrollButton,
 } from "components";
 import { useScrollLock } from "hooks";
 import { Comment, PaginatedResult } from "models";
+import { ErrorPage, LoadingPage } from "pages";
 import {
   useAuthenticatedUserStore,
   useCommentsStore,
   useModalsStore,
 } from "store";
-import { createPortal } from "react-dom";
 
 const Container = {
   Main: styled.div`
-    background-color: ${Colors.Neutral.VeryLightGray};
+    background-color: ${({ theme }) => theme.colors.background.primary};
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -128,14 +129,19 @@ export function HomePage() {
     window.scrollTo({ behavior: "smooth", top: 0 });
   }
 
-  if (fetchCommentsStatus === "loading") {
-    return <div>Loading...</div>;
+  if (fetchCommentsStatus === "idle" || fetchCommentsStatus === "loading") {
+    return <LoadingPage />;
+  }
+
+  if (fetchCommentsStatus === "error") {
+    return <ErrorPage />;
   }
 
   const isScrollButtonVisible = window.scrollY > window.innerHeight / 2;
 
   return (
     <Container.Main>
+      <Navbar />
       {authenticatedUser && (
         <AddCommentCard
           onButtonClick={(newComment) =>

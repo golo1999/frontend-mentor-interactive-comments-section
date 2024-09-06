@@ -1,7 +1,5 @@
 import styled from "styled-components";
 
-import { Colors } from "colors";
-
 export const Container = {
   CommentCard: styled.div`
     display: flex;
@@ -37,7 +35,7 @@ export const Container = {
 
 export const Text = {
   Loading: styled.p`
-    color: ${Colors.Neutral.GrayishBlue};
+    color: ${({ theme }) => theme.colors.text.loading};
     font-size: 4.26vw;
 
     @media screen {

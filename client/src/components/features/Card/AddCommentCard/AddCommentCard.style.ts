@@ -1,11 +1,10 @@
 import styled from "styled-components";
 
-import { Colors } from "colors";
-
 export const Button = styled.button.attrs({ type: "button" })`
-  background-color: ${Colors.Primary.ModerateBlue};
+  background-color: ${({ theme }) =>
+    theme.colors.background.cta.primary.default};
   border-radius: 2.13vw;
-  color: ${Colors.Neutral.LightGray};
+  color: ${({ theme }) => theme.colors.text.cta.primary.default};
   cursor: ${({ disabled }) => (disabled ? "no-drop" : "pointer")};
   font-size: 3.46vw;
   font-weight: 600;
@@ -13,9 +12,11 @@ export const Button = styled.button.attrs({ type: "button" })`
   text-transform: uppercase;
 
   &:hover {
-    ${({ disabled }) =>
-      !disabled && `background-color: ${Colors.Primary.LightGrayishBlue};`};
-    ${({ disabled }) => !disabled && `color: ${Colors.Neutral.VeryLightGray};`};
+    ${({ disabled, theme }) =>
+      !disabled &&
+      `background-color: ${theme.colors.background.cta.primary.hover};`};
+    ${({ disabled, theme }) =>
+      !disabled && `color: ${theme.colors.text.cta.primary.hover};`};
   }
 
   @media screen {
@@ -54,16 +55,17 @@ export const Container = {
 };
 
 export const TextArea = styled.textarea`
+  background-color: ${({ theme }) => theme.colors.background.secondary};
   border-radius: 2.13vw;
-  border: 0.26vw solid ${Colors.Neutral.LightGray};
-  color: ${Colors.Neutral.DarkBlue};
+  border: 0.26vw solid ${({ theme }) => theme.colors.border.primary};
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   font-size: 4.26vw;
   padding: 2.13vw 4.26vw;
   resize: none;
 
   &:hover {
-    border-color: ${Colors.Neutral.DarkBlue};
+    border-color: ${({ theme }) => theme.colors.border.secondary};
   }
 
   @media screen {

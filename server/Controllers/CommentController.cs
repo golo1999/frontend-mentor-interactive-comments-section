@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using server.Models.DTOs;
 using server.Models.Entities;
+using server.Models.Entities.ApiCall;
 using server.Models.Enums;
 using server.Services.Service;
 using System.ComponentModel.DataAnnotations;
@@ -10,6 +12,7 @@ using System.ComponentModel.DataAnnotations;
 namespace server.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
     public class CommentController(ICommentService commentService, IMapper mapper, IUserService userService) : ControllerBase
     {
@@ -18,76 +21,173 @@ namespace server.Controllers
         private readonly IUserService _userService = userService;
 
         [HttpPost]
-        public async Task<ActionResult<Comment>> Create([FromBody] CommentDTO commentDTO)
+        public async Task<ActionResult<ApiCallResult<Comment>>> Create([FromBody] CommentDTO commentDTO)
         {
-            ArgumentNullException.ThrowIfNull(commentDTO);
+            if (commentDTO is null)
+            {
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The commentDTO must not be null.",
+                        Type = ApiCallErrorType.NULL_ENTITY
+                    }
+                });
+            }
 
             if (commentDTO.ParentId is not null && !Guid.TryParse(commentDTO.ParentId.ToString(), out _))
             {
-                return BadRequest("The parentId is not valid.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parentId is invalid.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                });
             }
 
             if (commentDTO.ReplyToUserId is not null && !Guid.TryParse(commentDTO.ReplyToUserId.ToString(), out _))
             {
-                return BadRequest("The replyToUserId is not valid.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The replyToUserId is invalid.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                });
             }
 
             if (string.IsNullOrWhiteSpace(commentDTO.Text))
             {
-                return BadRequest("The text must not be empty.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The text must not be empty.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                });
             }
 
             var mappedComment = _mapper.Map<Comment>(commentDTO);
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
+            var currentUserEmailAddress = HttpContext.User.Identity!.Name;
 
-            if (currentUser is not null)
+            if (string.IsNullOrEmpty(currentUserEmailAddress))
             {
-                mappedComment.UserId = currentUser.Id;
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The current user's email address is null or empty.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                });
             }
 
-            var createdComment = await _commentService.Create(mappedComment);
+            var currentUser = await _userService.GetByEmailAddress(currentUserEmailAddress);
 
-            if (createdComment is null)
+            if (currentUser.Entity is null)
             {
-                return BadRequest();
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The current user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
             }
 
-            if (currentUser is not null)
-            {
-                createdComment.User = currentUser;
-            }
+            mappedComment.UserId = currentUser.Entity.Id;
 
-            if (createdComment.ReplyToUserId is not null)
+            var createdComment = await _commentService.Create(currentUser.Entity.Id, mappedComment);
+
+            if (createdComment.Entity is not null)
             {
-                var replyToUser = await _userService.GetById(createdComment.ReplyToUserId.Value);
-                createdComment.ReplyToUser = replyToUser;
+                if (currentUser.Entity is not null)
+                {
+                    createdComment.Entity.User = currentUser.Entity;
+                }
+
+                if (createdComment.Entity.ReplyToUserId is not null)
+                {
+                    var replyToUser = await _userService.GetById(createdComment.Entity.ReplyToUserId.Value);
+                    createdComment.Entity.ReplyToUser = replyToUser.Entity;
+                }
             }
 
             return Ok(createdComment);
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<Comment?>> Delete([FromRoute] Guid id, Guid? parentId = null)
+        public async Task<ActionResult<ApiCallResult<Comment>>> Delete([FromRoute] Guid id, Guid? parentId = null)
         {
             if (!Guid.TryParse(id.ToString(), out _))
             {
-                return BadRequest("The id is not valid.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The id is invalid.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                });
+
             }
 
             if (parentId is not null && !Guid.TryParse(parentId.ToString(), out _))
             {
-                return BadRequest("The parentId is not valid.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parentId is invalid.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                });
             }
 
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
-            var deletedComment = await _commentService.Delete(currentUser.Id, id, parentId);
+            var currentUserEmailAddress = HttpContext.User.Identity!.Name;
 
-            if (deletedComment is null)
+            if (string.IsNullOrEmpty(currentUserEmailAddress))
             {
-                return NotFound("The comment does not exist.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The current user's email address is null or empty.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                });
             }
 
-            return Ok(deletedComment);
+            var currentUser = await _userService.GetByEmailAddress(currentUserEmailAddress);
+
+            if (currentUser.Entity is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The current user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
+            }
+
+            return Ok(await _commentService.Delete(currentUser.Entity.Id, id, parentId));
         }
 
         [HttpGet("all")]
@@ -107,55 +207,110 @@ namespace server.Controllers
         }
 
         [HttpPatch("{id}")]
-        public async Task<ActionResult<Vote?>> Patch([FromRoute] Guid id, [FromBody] JsonPatchDocument<Comment> patch, Guid? parentId = null)
+        public async Task<ActionResult<ApiCallResult<Comment>>> Patch([FromRoute] Guid id, [FromBody] JsonPatchDocument<Comment> patch, Guid? parentId = null)
         {
             if (!Guid.TryParse(id.ToString(), out _))
             {
-                return BadRequest("The id is not valid.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The id is invalid.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                });
             }
 
             if (parentId is not null && !Guid.TryParse(parentId.ToString(), out _))
             {
-                return BadRequest("The parentId is not valid.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parentId is invalid.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                });
             }
 
-            var patchedComment = await _commentService.Patch(id, patch, parentId);
-
-            if (patchedComment is null)
-            {
-                return NotFound("The comment does not exist.");
-            }
-
-            return Ok(patchedComment);
+            return Ok(await _commentService.Patch(id, patch, parentId));
         }
 
         [HttpPatch("{id}/vote")]
-        public async Task<ActionResult<Comment?>> Vote([FromRoute] Guid id, VoteType voteType, Guid? parentId = null)
+        public async Task<ActionResult<ApiCallResult<Comment>>> Vote([FromRoute] Guid id, VoteType voteType, Guid? parentId = null)
         {
             if (!Guid.TryParse(id.ToString(), out _))
             {
-                return BadRequest("The id is not valid.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The id is invalid.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                };
             }
 
             if (parentId is not null && !Guid.TryParse(parentId.ToString(), out _))
             {
-                return BadRequest("The parentId is not valid.");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The parentId is invalid.",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                };
             }
 
             if (!voteType.Equals(VoteType.DOWN) && !voteType.Equals(VoteType.UP))
             {
-                return BadRequest("The type must be \"DOWN\" (0) or \"UP\" (1).");
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The type must be \"DOWN\" (0) or \"UP\" (1).",
+                        Type = ApiCallErrorType.INVALID_FIELD
+                    }
+                };
             }
 
-            var currentUser = await _userService.GetByEmailAddress("me@email.com");
-            var votedComment = await _commentService.Vote(voteType, currentUser.Id, id, parentId);
+            var currentUserEmailAddress = HttpContext.User.Identity!.Name;
 
-            if (votedComment is null)
+            if (string.IsNullOrEmpty(currentUserEmailAddress))
             {
-                return NotFound("The comment does not exist.");
+                return Ok(new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The current user's email address is null or empty.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                });
             }
 
-            return Ok(votedComment);
+            var currentUser = await _userService.GetByEmailAddress(currentUserEmailAddress);
+
+            if (currentUser.Entity is null)
+            {
+                return new ApiCallResult<Comment>()
+                {
+                    Entity = null,
+                    Error = new()
+                    {
+                        Message = "The current user does not exist.",
+                        Type = ApiCallErrorType.ENTITY_NOT_FOUND
+                    }
+                };
+            }
+
+            return Ok(await _commentService.Vote(voteType, currentUser.Entity.Id, id, parentId));
         }
     }
 }

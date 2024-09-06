@@ -7,10 +7,10 @@ import { Configuration } from "@azure/msal-browser";
  */
 export const msalConfig: Configuration = {
   auth: {
-    clientId: "be8fb141-1de4-47e6-b6eb-83b069827245",
-    authority: "https://login.microsoftonline.com/consumers",
+    clientId: "f1aad6c7-4ed7-45ba-811f-1ce7c96992cf",
+    authority:
+      "https://login.microsoftonline.com/6bb41fe4-40a3-4a10-b6cd-38278e78b21a",
     redirectUri: "http://localhost:3000",
-    // clientSecret:
   },
   cache: {
     cacheLocation: "sessionStorage", // This configures where your cache will be stored (e.g. sessionStorage| localStorage)

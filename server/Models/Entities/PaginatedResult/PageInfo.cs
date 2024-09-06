@@ -1,4 +1,4 @@
-﻿namespace server.Models.Entities
+﻿namespace server.Models.Entities.PaginatedResult
 {
     public class PageInfo
     {

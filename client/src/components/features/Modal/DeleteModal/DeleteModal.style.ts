@@ -1,7 +1,5 @@
 import styled, { css } from "styled-components";
 
-import { Colors } from "colors";
-
 const sharedButtonStyle = css`
   border-radius: 2.13vw;
   cursor: pointer;
@@ -30,20 +28,24 @@ const sharedButtonStyle = css`
 export const Button = {
   Cancel: styled.button.attrs({ type: "button" })`
     ${sharedButtonStyle}
-    background-color: ${Colors.Neutral.GrayishBlue};
-    color: ${Colors.Neutral.White};
+    background-color: ${({ theme }) =>
+      theme.colors.background.cta.modal.cancel.default};
+    color: ${({ theme }) => theme.colors.text.cta.modal.cancel};
 
     &:hover {
-      background-color: ${Colors.Neutral.LightGray};
+      background-color: ${({ theme }) =>
+        theme.colors.background.cta.modal.cancel.hover};
     }
   `,
   Delete: styled.button.attrs({ type: "button" })`
     ${sharedButtonStyle}
-    background-color: ${Colors.Primary.SoftRed};
-    color: ${Colors.Neutral.LightGray};
+    background-color: ${({ theme }) =>
+      theme.colors.background.cta.modal.delete.default};
+    color: ${({ theme }) => theme.colors.text.cta.modal.delete};
 
     &:hover {
-      background-color: ${Colors.Primary.PaleRed};
+      background-color: ${({ theme }) =>
+        theme.colors.background.cta.modal.delete.hover};
     }
   `,
 };
@@ -68,7 +70,7 @@ export const Container = {
 
 export const Text = {
   Message: styled.p`
-    color: ${Colors.Neutral.GrayishBlue};
+    color: ${({ theme }) => theme.colors.text.modal.message};
     font-size: 3.73vw;
 
     @media screen {
@@ -82,7 +84,7 @@ export const Text = {
     }
   `,
   Title: styled.p`
-    color: ${Colors.Neutral.DarkBlue};
+    color: ${({ theme }) => theme.colors.text.modal.title};
     font-size: 4.26vw;
     font-weight: 700;
 

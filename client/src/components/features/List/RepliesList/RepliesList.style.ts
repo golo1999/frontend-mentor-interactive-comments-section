@@ -1,7 +1,5 @@
 import styled from "styled-components";
 
-import { Colors } from "colors";
-
 export const Container = {
   CommentReplies: {
     Inner: styled.div`
@@ -40,7 +38,7 @@ export const Container = {
 };
 
 export const Line = styled.div`
-  background-color: ${Colors.Neutral.LightGray};
+  background-color: ${({ theme }) => theme.colors.line};
   height: inherit;
   width: 0.53vw;
 

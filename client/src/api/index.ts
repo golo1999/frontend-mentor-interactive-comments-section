@@ -1,6 +1,4 @@
+export * from "./Comment";
+export * from "./User";
 export * from "./authConfig";
-export { useDeleteCommentMutation } from "./deleteComment";
-export { useGetCommentsQuery } from "./getComments";
-export { usePatchCommentMutation } from "./patchComment";
-export { usePostCommentMutation } from "./postComment";
-export { useVoteCommentMutation } from "./voteComment";
+export { prepareToken } from "./authUtils";
